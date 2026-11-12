@@ -3,8 +3,9 @@
 import { BaseError, ContractFunctionRevertedError, formatEther, isAddress, keccak256, parseEther, parseEventLogs, toBytes } from "viem";
 import { ambagVaultAbi } from "../../src/abi/AmbagVault";
 import { agentClient, publicClient, VAULT_ADDRESS } from "../_lib/chain";
+import { callerWallet } from "../_lib/auth";
 import { storeReceiptImage } from "../_lib/cloudinary";
-import { db } from "../_lib/firebase";
+import { receipts } from "../_lib/firebase";
 import { readReceipt, reviewRisk, type Extraction, type ModelReview } from "../_lib/gemini";
 import { RISK, riskFloor, type RiskLevel } from "../_lib/risk";
 
@@ -18,7 +19,7 @@ const json = (body: object, status = 200) => Response.json(body, { status });
 const pesos = (wei: bigint) => Number(formatEther(wei));
 const php = (n: number) => "₱" + n.toLocaleString("en-PH", { maximumFractionDigits: 2 });
 
-type Body = { collectionId?: number; imageBase64?: string; mimeType?: string; payee?: string; uploader?: string; categoryIndex?: number | null };
+type Body = { collectionId?: number; imageBase64?: string; mimeType?: string; payee?: string; categoryIndex?: number | null };
 
 export default {
   async fetch(request: Request) {
@@ -26,11 +27,10 @@ export default {
 
     // 1) Validate input (trust boundary).
     const body = (await request.json().catch(() => null)) as Body | null;
-    const { collectionId, imageBase64, mimeType, payee, uploader, categoryIndex: chosenIndex } = body ?? {};
+    const { collectionId, imageBase64, mimeType, payee, categoryIndex: chosenIndex } = body ?? {};
     if (!Number.isInteger(collectionId) || collectionId! < 0) return json({ error: "Invalid collectionId" }, 400);
     const chosen = chosenIndex ?? null; // treasurer's category pick; null = let the AI choose
     if (chosen !== null && (!Number.isInteger(chosen) || chosen < 0)) return json({ error: "Invalid categoryIndex" }, 400);
-    if (!uploader || !isAddress(uploader)) return json({ error: "Invalid uploader" }, 400);
     if (!payee || !isAddress(payee)) return json({ error: "Invalid payee" }, 400);
     if (!mimeType || !IMAGE_TYPES.includes(mimeType)) return json({ error: "Receipt must be a JPG, PNG, WEBP or HEIC image" }, 400);
     if (typeof imageBase64 !== "string" || imageBase64.length === 0) return json({ error: "Missing image" }, 400);
@@ -39,7 +39,9 @@ export default {
     const id = BigInt(collectionId!);
 
     try {
-      // shortcut: uploader is a claimed address, not proven by a login token; anyone can trigger a proposal (never a payout). Verify the Privy token server-side if time allows.
+      // The uploader is proven by the Privy token, not taken from the body.
+      const uploader = await callerWallet(request);
+      if (!uploader) return json({ error: "Mag-login muna." }, 401);
       const isTreasurer = await publicClient.readContract({ ...vault, functionName: "hasRole", args: [TREASURER_ROLE, uploader] });
       if (!isTreasurer) return json({ error: "Treasurer lang ang puwedeng mag-upload ng resibo." }, 403);
 
@@ -52,8 +54,7 @@ export default {
 
       // Duplicate: the chain already knows, so skip the AI and let the contract itself refuse it (simulate only, no tx).
       if (duplicate) {
-        const original = await db()
-          .collection("receipts")
+        const original = await receipts()
           .doc(receiptHash)
           .get()
           .then((d) => d.data())
@@ -196,8 +197,7 @@ export default {
       const expenseId = Number(event.args.expenseId);
 
       // 8) Save for history + ledger titles. Only proposed receipts, so a duplicate never overwrites the original.
-      await db()
-        .collection("receipts")
+      await receipts()
         .doc(receiptHash)
         .set({ collectionId, categoryIndex, imageUrl, extracted, risk: RISK[risk], reason, checks, expenseId, txHash, createdAt: Date.now() })
         .catch((e) => console.error("save failed:", errText(e)));
@@ -214,7 +214,7 @@ type PastReceipt = { categoryIndex: number; vendor: string | null; total: number
 
 async function pastReceipts(collectionId: number): Promise<PastReceipt[]> {
   // Single-field filter (no composite index needed); sort in code. Data is small.
-  const snap = await db().collection("receipts").where("collectionId", "==", collectionId).get();
+  const snap = await receipts().where("collectionId", "==", collectionId).get();
   return snap.docs
     .map((d) => {
       const x = d.data();

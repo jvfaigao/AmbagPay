@@ -1,0 +1,9 @@
+{
+  "network": "bscTestnet",
+  "chainId": 97,
+  "deployer": "0x05aCe4a4eeE7622A1a5BBB060C562Ce122a42B10",
+  "MockPHP": "0xf24D1b05d6EDA85ce22361F3fb327b2c022455Ea",
+  "AmbagVault": "0xB1930A7A22edcc231E09415f66490a132460DC15",
+  "adviserThreshold": "1000000000000000000000",
+  "deployedAt": "2026-11-12T14:27:36.925Z"
+}

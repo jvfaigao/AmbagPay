@@ -100,6 +100,7 @@ function ReviewPanel({ address, categories }: { address: `0x${string}`; categori
   const [image, setImage] = useState<{ base64: string; mimeType: string; previewUrl: string }>();
   const [payee, setPayee] = useState<string>(address);
   const [categoryIndex, setCategoryIndex] = useState<number | null>(null); // null = let the AI choose
+  const { getAccessToken } = usePrivy();
   const [busy, setBusy] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
   const [result, setResult] = useState<Review>();
@@ -126,13 +127,12 @@ function ReviewPanel({ address, categories }: { address: `0x${string}`; categori
     try {
       const res = await fetch("/api/agent/review", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", authorization: `Bearer ${await getAccessToken()}` },
         body: JSON.stringify({
           collectionId: Number(collectionId),
           imageBase64: image.base64,
           mimeType: image.mimeType,
           payee,
-          uploader: address,
           categoryIndex,
         }),
       });

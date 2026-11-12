@@ -82,9 +82,10 @@ npm run dev
 vercel dev            # runs web + /api functions locally
 ```
 
-## Key addresses (fill after deploy — also in contracts/deployments/bscTestnet.json)
+## Key addresses (BSC Testnet, deployed + verified Nov 12 — also in contracts/deployments/bscTestnet.json)
 
-- MockPHP (tPHP): `0x...`
-- AmbagVault: `0x...`
-- Admin (deployer): `0x...`
-- Agent wallet: `0x...`
+- MockPHP (tPHP): `0xf24D1b05d6EDA85ce22361F3fb327b2c022455Ea` — https://testnet.bscscan.com/address/0xf24D1b05d6EDA85ce22361F3fb327b2c022455Ea#code
+- AmbagVault: `0xB1930A7A22edcc231E09415f66490a132460DC15` — https://testnet.bscscan.com/address/0xB1930A7A22edcc231E09415f66490a132460DC15#code
+- Admin (deployer): `0x05aCe4a4eeE7622A1a5BBB060C562Ce122a42B10`
+- Agent wallet: `0x84Af752FfCc1b736491b7970088b754F9dd7F7ea`
+- Treasurer: `0xDfFC711a901A6BF38F65282205231c926C532A4e` · Adviser: `0x7Ad177bEB72cD91405229d81B8d6AC4f48009ff6`

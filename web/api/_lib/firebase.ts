@@ -1,6 +1,7 @@
 // firebase-admin (Firestore only) from FIREBASE_SERVICE_ACCOUNT (JSON string). Server only.
 import { cert, getApps, initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
+import { CHAIN_ID } from "./chain";
 
 function app() {
   if (getApps().length) return getApps()[0];
@@ -10,3 +11,6 @@ function app() {
 }
 
 export const db = () => getFirestore(app());
+
+// One collection per chain, so local test receipts never show up on the testnet ledger.
+export const receipts = () => db().collection(`receipts-${CHAIN_ID}`);

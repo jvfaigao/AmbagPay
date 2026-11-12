@@ -1,6 +1,7 @@
-// POST /api/onboard { address } -> gives a new wallet a little gas + ₱1,000 tPHP.
-import { isAddress, parseEther } from "viem";
+// POST /api/onboard (Authorization: Bearer <Privy access token>) -> gives the caller's wallet a little gas + ₱1,000 tPHP.
+import { parseEther } from "viem";
 import { mockPhpAbi } from "../src/abi/MockPHP";
+import { callerWallet } from "./_lib/auth";
 import { faucetClient, publicClient, TOKEN_ADDRESS } from "./_lib/chain";
 
 const GAS_DRIP = parseEther("0.005");
@@ -13,13 +14,13 @@ export default {
   async fetch(request: Request) {
     if (request.method !== "POST") return json({ error: "POST only" }, 405);
 
-    const body = (await request.json().catch(() => null)) as { address?: string } | null;
-    const address = body?.address;
-    if (!address || !isAddress(address)) return json({ error: "Invalid address" }, 400);
+    // Only a logged-in Privy user, and only their own wallet: random addresses cannot drain the faucet.
+    const address = await callerWallet(request);
+    if (!address) return json({ error: "Mag-login muna." }, 401);
 
     try {
       // The chain is the memory: only top up what is missing, so repeat calls cost nothing.
-      // shortcut: a wallet that empties itself can be topped up again, and two parallel calls can double-drip. Fine on testnet; use Firestore `onboarded` if abused.
+      // shortcut: a user who empties their wallet can be topped up again, and two parallel calls can double-drip. Fine on testnet; use Firestore `onboarded` if abused.
       const [gas, tphp] = await Promise.all([
         publicClient.getBalance({ address }),
         publicClient.readContract({ address: TOKEN_ADDRESS, abi: mockPhpAbi, functionName: "balanceOf", args: [address] }),

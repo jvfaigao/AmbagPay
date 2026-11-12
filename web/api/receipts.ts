@@ -1,6 +1,6 @@
 // GET /api/receipts?collectionId=0 -> public titles + agent verdicts for the ledger, keyed by expense id.
 // Only public fields leave the server (vendor, first item, risk, reason); never member data.
-import { db } from "./_lib/firebase";
+import { receipts } from "./_lib/firebase";
 
 const json = (body: object, status = 200) =>
   Response.json(body, { status, headers: { "cache-control": "public, max-age=5" } });
@@ -12,7 +12,7 @@ export default {
     if (!Number.isInteger(collectionId) || collectionId < 0) return json({ error: "Invalid collectionId" }, 400);
 
     try {
-      const snap = await db().collection("receipts").where("collectionId", "==", collectionId).get();
+      const snap = await receipts().where("collectionId", "==", collectionId).get();
       const expenses: Record<number, { title: string | null; risk: string; reason: string }> = {};
       for (const doc of snap.docs) {
         const x = doc.data();
