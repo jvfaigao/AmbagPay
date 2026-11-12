@@ -16,12 +16,18 @@ export default function Home() {
 
       <div className="flex flex-col gap-3">
         <Link
-          to={`/ledger/${DEMO_COLLECTION_ID}`}
+          to={`/pay/${DEMO_COLLECTION_ID}`}
           className="flex h-14 items-center justify-center rounded-[14px] bg-gold text-base font-bold text-dark"
+        >
+          Pay your share
+        </Link>
+        <Link
+          to={`/ledger/${DEMO_COLLECTION_ID}`}
+          className="flex h-14 items-center justify-center rounded-[14px] border border-gold text-base font-bold text-gold"
         >
           View public ledger
         </Link>
-        <p className="text-center text-xs text-[#BFD3C9]">Pay and officer pages are coming in the next build.</p>
+        <p className="text-center text-xs text-[#BFD3C9]">The officer page is coming in the next build.</p>
       </div>
     </div>
   );

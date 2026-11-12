@@ -1,7 +1,7 @@
 import { useParams } from "react-router-dom";
 import { useReadContracts } from "wagmi";
 import Layout from "../components/Layout";
-import { Card, Chip, ErrorCard, Eyebrow, ExplorerLink, LoadingCard, ProgressBar } from "../components/ui";
+import { Card, Chip, ErrorCard, Eyebrow, ExplorerLink, LoadingCard, ProgressBar, Row } from "../components/ui";
 import { EXPECTED_MEMBERS, ORG_NAME, VAULT_ADDRESS } from "../config";
 import { COLLECTION_STATUS, EXPENSE_STATUS, RISK_LABEL, vault } from "../lib/contracts";
 import { formatDate, percent, peso, pesoShort } from "../lib/format";
@@ -134,15 +134,6 @@ function Stat({ label, value }: { label: string; value: string }) {
     <div className="flex-1 rounded-[14px] border border-line bg-paper p-3">
       <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">{label}</p>
       <p className="font-display text-lg font-bold text-dark">{value}</p>
-    </div>
-  );
-}
-
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between text-sm">
-      <span>{label}</span>
-      <span className="font-semibold text-dark">{value}</span>
     </div>
   );
 }

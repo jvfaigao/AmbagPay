@@ -48,3 +48,12 @@ export function ErrorCard({ message }: { message: string }) {
     </Card>
   );
 }
+
+export function Row({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between text-sm">
+      <span>{label}</span>
+      <span className="font-semibold text-dark">{value}</span>
+    </div>
+  );
+}

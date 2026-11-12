@@ -19,18 +19,18 @@ Deadline: **Fri Nov 13, 3:30 PM onsite**. **Feature freeze 12:00 PM.**
 ## Steps
 
 ### Step 0 — git + public repo
-- [ ] `git init`, first commit of everything done so far
+- [x] `git init`, first commit of everything done so far
 - [ ] Create the public GitHub repo, push
 - Done = repo is public and has a Nov 12 commit.
 
 ### Step 1 — Privy Google login + embedded wallet (M1)
-- [ ] `PrivyProvider` + `@privy-io/wagmi`, Google login only, embedded wallet on login, only chain = `src/config.ts`
-- [ ] Login chip in the header (email + short address + logout)
+- [x] `PrivyProvider` + `@privy-io/wagmi`, Google login only, embedded wallet on login, only chain = `src/config.ts`
+- [x] Login chip in the header (email + short address + logout)
 - Done = new Google user logs in on localhost and sees a wallet address; `/ledger/:id` still works logged out.
 
 ### Step 2 — `/api/onboard` + `/pay/:id` (M2, M3)
-- [ ] `/api/onboard`: tBNB drip + mint ₱1,000 tPHP, once per address (Firestore `onboarded`)
-- [ ] `/pay/:id`: collection card, caps, balance, `approve` → `pay`, success + tx link, "Paid ✓" if `hasPaid`
+- [x] `/api/onboard`: tBNB drip + mint ₱1,000 tPHP, only tops up what is missing (chain check, no Firestore)
+- [x] `/pay/:id`: collection card, caps, balance, `approve` → `pay`, success + tx link, "Paid ✓" if `hasPaid`
 - Done = log in → get tPHP → pay ₱150 → ledger shows +₱150. First real embedded-wallet tx (watch the local-RPC risk).
 
 ### Step 3 — `/api/agent/review` (M4, M5)
