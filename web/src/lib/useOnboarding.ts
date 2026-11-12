@@ -27,7 +27,11 @@ export function useOnboarding(address: `0x${string}` | undefined, tphp: bigint |
     setOnboarding(true);
     getAccessToken()
       .then((token) => fetch("/api/onboard", { method: "POST", headers: { authorization: `Bearer ${token}` } }))
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error("Hindi na-setup ang wallet. Subukan ulit mamaya."))))
+      .then(async (r) => {
+        if (r.ok) return r.json();
+        const reason = ((await r.json().catch(() => null)) as { error?: string } | null)?.error ?? `HTTP ${r.status}`;
+        throw new Error(`Hindi na-setup ang wallet (${reason}). Subukan ulit mamaya.`);
+      })
       .then(() => Promise.all([refetchGas(), onDoneRef.current()]))
       .catch((e: Error) => setOnboardError(e.message))
       .finally(() => setOnboarding(false));

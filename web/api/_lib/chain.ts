@@ -15,7 +15,9 @@ export const publicClient = createPublicClient({ chain, transport: http(rpc) });
 function walletFrom(envName: "FAUCET_PRIVATE_KEY" | "AGENT_PRIVATE_KEY") {
   const key = process.env[envName];
   if (!key) throw new Error(`${envName} is not set`);
-  return createWalletClient({ account: privateKeyToAccount(key as `0x${string}`), chain, transport: http(rpc) });
+  // MetaMask exports keys without the 0x prefix; viem needs it.
+  const hex = (key.startsWith("0x") ? key : `0x${key}`) as `0x${string}`;
+  return createWalletClient({ account: privateKeyToAccount(hex), chain, transport: http(rpc) });
 }
 
 /** Faucet = owner of MockPHP: sends the gas drip and mints test pesos. */
