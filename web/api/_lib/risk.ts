@@ -14,7 +14,30 @@ export type FloorInput = {
   remaining: number; // pesos left in the category
   pastAmounts: number[]; // same collection + category
   vendorSeen: boolean;
+  similarExpense: number | null; // expense id of a past receipt with the same vendor, total and date
+  splitPattern: boolean;
 };
+
+export type PastReceipt = { vendor: string | null; total: number | null; date: string | null; payee: string | null; expenseId: number | null; createdAt: number };
+
+const norm = (s: string | null | undefined) => (s ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+
+/** Same vendor + total + date as a past receipt = the same purchase photographed again (the file hash differs, so the contract can't see it). */
+export function findSimilar(past: PastReceipt[], vendor: string | null, total: number | null, date: string | null): number | null {
+  if (!norm(vendor) || total === null || !date) return null;
+  const hit = past.find((p) => norm(p.vendor) === norm(vendor) && p.total === total && p.date === date);
+  return hit ? (hit.expenseId ?? -1) : null;
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** ≥2 other receipts to the same payee in 24 h that, with this one, go over the adviser threshold while this one alone does not. */
+export function isSplit(past: PastReceipt[], payee: string, amount: number | null, threshold: number, now: number): boolean {
+  if (amount === null || amount > threshold) return false;
+  const recent = past.filter((p) => norm(p.payee) === norm(payee) && now - p.createdAt < DAY_MS && typeof p.total === "number");
+  const sum = recent.reduce((s, p) => s + (p.total as number), amount);
+  return recent.length >= 2 && sum > threshold;
+}
 
 export function riskFloor(i: FloorInput): { risk: RiskLevel; reasons: string[] } {
   const high: string[] = [];
@@ -23,6 +46,8 @@ export function riskFloor(i: FloorInput): { risk: RiskLevel; reasons: string[] }
   if (i.amount === null || !(i.amount > 0)) high.push("Walang malinaw na total sa resibo");
   if (!i.categoryKnown) high.push("Hindi tugma sa kahit anong category");
   if (i.duplicate) high.push("Nagamit na ang resibong ito");
+  if (i.similarExpense !== null)
+    high.push(`Posibleng duplicate: parehong vendor, halaga at petsa${i.similarExpense >= 0 ? ` ng Expense #${i.similarExpense}` : ""}`);
   if (i.suspiciousText.length > 0) high.push("May nakatagong instruction sa resibo");
   if (i.amount !== null && i.amount > i.remaining) high.push("Lagpas sa natitirang budget");
   if (high.length) return { risk: 2, reasons: high };
@@ -32,6 +57,7 @@ export function riskFloor(i: FloorInput): { risk: RiskLevel; reasons: string[] }
   if (avg > 0 && i.amount! > 1.5 * avg) medium.push("Mas mataas sa karaniwang presyo");
   if (!i.vendorSeen && i.amount! > 1000) medium.push("Bagong vendor at lampas ₱1,000");
   if (i.categoryMismatch) medium.push("Iba ang category na pinili ng treasurer sa hula ng AI");
+  if (i.splitPattern) medium.push("Posibleng hinati ang gastos para hindi dumaan sa adviser");
   if (medium.length) return { risk: 1, reasons: medium };
 
   return { risk: 0, reasons: [] };

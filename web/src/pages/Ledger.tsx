@@ -87,6 +87,10 @@ export default function Ledger() {
         <Stat label="Spent" value={pesoShort(collection.totalSpent)} />
         <Stat label="Left" value={pesoShort(left)} />
       </div>
+      <p className="text-xs text-muted">
+        Money is held by the AmbagVault contract, not by any officer.{" "}
+        <ExplorerLink path={`address/${VAULT_ADDRESS}#tokentxns`}>See every transfer on BscScan</ExplorerLink>
+      </p>
 
       <Card className="flex flex-col gap-2.5">
         <div className="flex items-center justify-between">
@@ -146,10 +150,6 @@ export default function Ledger() {
           })
         )}
       </Card>
-
-      <div className="flex justify-center">
-        <ExplorerLink path={`address/${VAULT_ADDRESS}`}>View the contract on BscScan</ExplorerLink>
-      </div>
     </Layout>
   );
 }

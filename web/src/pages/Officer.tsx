@@ -230,6 +230,8 @@ function checkLead(id: string, pass: boolean) {
     price: "Price.",
     injection: pass ? "No hidden instructions." : "Hidden instruction found.",
     category: "Category changed.",
+    similar: "Possible duplicate.",
+    split: "Possible split.",
   };
   return leads[id] ?? "";
 }

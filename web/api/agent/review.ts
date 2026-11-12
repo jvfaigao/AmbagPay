@@ -7,7 +7,7 @@ import { callerWallet } from "../_lib/auth";
 import { storeReceiptImage } from "../_lib/cloudinary";
 import { receipts } from "../_lib/firebase";
 import { readReceipt, reviewRisk, type Extraction, type ModelReview } from "../_lib/gemini";
-import { RISK, riskFloor, type RiskLevel } from "../_lib/risk";
+import { findSimilar, isSplit, RISK, riskFloor, type PastReceipt, type RiskLevel } from "../_lib/risk";
 
 // Vercel rejects request bodies over 4.5 MB; 3 MB of image ≈ 4 MB of base64.
 const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
@@ -47,9 +47,10 @@ export default {
 
       // 2) Hash is computed here from the raw bytes, never by the client or the model.
       const receiptHash = keccak256(bytes);
-      const [categories, duplicate] = await Promise.all([
+      const [categories, duplicate, adviserThreshold] = await Promise.all([
         publicClient.readContract({ ...vault, functionName: "getCategories", args: [id] }),
         publicClient.readContract({ ...vault, functionName: "receiptInUse", args: [receiptHash] }),
+        publicClient.readContract({ ...vault, functionName: "adviserThreshold" }),
       ]);
 
       // Duplicate: the chain already knows, so skip the AI and let the contract itself refuse it (simulate only, no tx).
@@ -114,6 +115,8 @@ export default {
       const pastAmounts = sameCategory.map((h) => h.total).filter((n): n is number => typeof n === "number");
       const vendor = extracted?.vendor?.trim().toLowerCase();
       const vendorSeen = !!vendor && history.some((h) => h.vendor?.trim().toLowerCase() === vendor);
+      const similarExpense = findSimilar(history, extracted?.vendor ?? null, amount, extracted?.date ?? null);
+      const splitPattern = isSplit(history, payee, amount, pesos(adviserThreshold), Date.now());
 
       // 5) Risk: code floor first, the model can only raise it.
       const floor = riskFloor({
@@ -127,6 +130,8 @@ export default {
         remaining,
         pastAmounts,
         vendorSeen,
+        similarExpense,
+        splitPattern,
       });
 
       let model: ModelReview | null = null;
@@ -166,6 +171,10 @@ export default {
           label: avg > 0 ? `Compared with past ${category?.name} expenses (avg ${php(avg)})` : "No past expenses to compare yet",
         },
         { id: "injection", pass: !hidden, label: hidden ? "Hidden instructions found in receipt" : "No hidden instructions found" },
+        ...(similarExpense !== null
+          ? [{ id: "similar", pass: false, label: `Same vendor, amount and date as ${similarExpense >= 0 ? `Expense #${similarExpense}` : "an earlier receipt"}` }]
+          : []),
+        ...(splitPattern ? [{ id: "split", pass: false, label: `Several small expenses to the same payee within 24 h add up to over ${php(pesos(adviserThreshold))}` }] : []),
         ...(categoryMismatch
           ? [{ id: "category", pass: false, label: `Treasurer chose ${category?.name}; AI guessed ${categories[aiIndex]?.name ?? "none"}` }]
           : []),
@@ -199,7 +208,7 @@ export default {
       // 8) Save for history + ledger titles. Only proposed receipts, so a duplicate never overwrites the original.
       await receipts()
         .doc(receiptHash)
-        .set({ collectionId, categoryIndex, imageUrl, extracted, risk: RISK[risk], reason, checks, expenseId, txHash, createdAt: Date.now() })
+        .set({ collectionId, categoryIndex, payee, imageUrl, extracted, risk: RISK[risk], reason, checks, expenseId, txHash, createdAt: Date.now() })
         .catch((e) => console.error("save failed:", errText(e)));
 
       return json({ ...result, outcome: "proposed", expenseId, txHash, blockedBy: null });
@@ -210,15 +219,21 @@ export default {
   },
 };
 
-type PastReceipt = { categoryIndex: number; vendor: string | null; total: number | null; date: string | null; createdAt: number };
-
-async function pastReceipts(collectionId: number): Promise<PastReceipt[]> {
+async function pastReceipts(collectionId: number): Promise<(PastReceipt & { categoryIndex: number })[]> {
   // Single-field filter (no composite index needed); sort in code. Data is small.
   const snap = await receipts().where("collectionId", "==", collectionId).get();
   return snap.docs
     .map((d) => {
       const x = d.data();
-      return { categoryIndex: x.categoryIndex, vendor: x.extracted?.vendor ?? null, total: x.extracted?.total ?? null, date: x.extracted?.date ?? null, createdAt: x.createdAt };
+      return {
+        categoryIndex: x.categoryIndex,
+        vendor: x.extracted?.vendor ?? null,
+        total: x.extracted?.total ?? null,
+        date: x.extracted?.date ?? null,
+        payee: x.payee ?? null, // older docs have no payee
+        expenseId: x.expenseId ?? null,
+        createdAt: x.createdAt,
+      };
     })
     .sort((a, b) => b.createdAt - a.createdAt);
 }

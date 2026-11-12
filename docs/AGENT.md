@@ -53,8 +53,8 @@ After `submit_review`, **code** (not the model) does:
 
 1. **Validate**: `amount` must equal the extracted total (±₱1) and be > 0; `categoryIndex` must exist. Otherwise risk = HIGH.
 2. **Compute the risk floor in code** (the model can only raise it):
-   - HIGH if: duplicate · any suspicious/injection text · unreadable receipt · amount > remaining budget · model error, timeout or 429 · model output fails schema.
-   - MEDIUM if: amount > 1.5 × average of past same-category receipts · vendor never seen before AND amount > ₱1,000.
+   - HIGH if: duplicate · same vendor + total + date as a past receipt (re-photographed; the file hash differs) · any suspicious/injection text · unreadable receipt · amount > remaining budget · model error, timeout or 429 · model output fails schema.
+   - MEDIUM if: amount > 1.5 × average of past same-category receipts · vendor never seen before AND amount > ₱1,000 · treasurer picked a different category than the AI · ≥ 2 other receipts to the same payee in 24 h that, with this one, add up over the adviser threshold (possible split).
    - else LOW.
    - `finalRisk = max(codeRisk, modelRisk)`.
 3. **Simulate first** with viem `simulateContract(proposeExpense…)` from the agent account.
