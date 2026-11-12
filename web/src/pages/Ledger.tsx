@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
 import { useReadContracts } from "wagmi";
 import Layout from "../components/Layout";
@@ -40,6 +41,18 @@ export default function Ledger() {
     .map((r, i) => ({ id: i, e: r.result }))
     .filter((x) => x.e && x.e.collectionId === collectionId)
     .reverse(); // newest first
+
+  // 3) Off-chain titles + agent reasons (Firestore via /api). Optional: the ledger still works from chain data alone.
+  const receipts = useQuery({
+    queryKey: ["receipts", collectionId.toString()],
+    queryFn: async () => {
+      const res = await fetch(`/api/receipts?collectionId=${collectionId}`);
+      if (!res.ok) throw new Error("receipts unavailable");
+      return (await res.json()).expenses as Record<number, { title: string | null; reason: string }>;
+    },
+    refetchInterval: 10_000,
+    retry: false,
+  });
 
   if (base.isLoading) {
     return (
@@ -100,14 +113,21 @@ export default function Ledger() {
           expenses.map(({ id: expenseId, e }) => {
             const exp = e!;
             const categoryName = categories[exp.categoryIndex]?.name ?? "Uncategorized";
+            const offChain = receipts.data?.[expenseId];
             return (
               <div key={expenseId} className="flex flex-col gap-1.5 border-b border-line py-3 last:border-b-0">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-semibold text-dark">
-                    {categoryName} · Expense #{expenseId}
+                <div className="flex items-start justify-between gap-3 text-sm">
+                  <span className="flex flex-col">
+                    <span className="font-semibold text-dark">{offChain?.title ?? `${categoryName} · Expense #${expenseId}`}</span>
+                    {offChain?.title && (
+                      <span className="text-xs text-muted">
+                        {categoryName} · Expense #{expenseId}
+                      </span>
+                    )}
                   </span>
                   <span className="font-semibold text-dark">{pesoShort(exp.amount)}</span>
                 </div>
+                {offChain?.reason && <p className="text-xs italic">Agent: "{offChain.reason}"</p>}
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <StatusChip status={exp.status} treasurer={exp.treasurerApproved} adviser={exp.adviserApproved} risk={exp.risk} />
                   {exp.receiptURI && (
