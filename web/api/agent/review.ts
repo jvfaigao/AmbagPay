@@ -18,7 +18,7 @@ const json = (body: object, status = 200) => Response.json(body, { status });
 const pesos = (wei: bigint) => Number(formatEther(wei));
 const php = (n: number) => "₱" + n.toLocaleString("en-PH", { maximumFractionDigits: 2 });
 
-type Body = { collectionId?: number; imageBase64?: string; mimeType?: string; payee?: string; uploader?: string };
+type Body = { collectionId?: number; imageBase64?: string; mimeType?: string; payee?: string; uploader?: string; categoryIndex?: number | null };
 
 export default {
   async fetch(request: Request) {
@@ -26,8 +26,10 @@ export default {
 
     // 1) Validate input (trust boundary).
     const body = (await request.json().catch(() => null)) as Body | null;
-    const { collectionId, imageBase64, mimeType, payee, uploader } = body ?? {};
+    const { collectionId, imageBase64, mimeType, payee, uploader, categoryIndex: chosenIndex } = body ?? {};
     if (!Number.isInteger(collectionId) || collectionId! < 0) return json({ error: "Invalid collectionId" }, 400);
+    const chosen = chosenIndex ?? null; // treasurer's category pick; null = let the AI choose
+    if (chosen !== null && (!Number.isInteger(chosen) || chosen < 0)) return json({ error: "Invalid categoryIndex" }, 400);
     if (!uploader || !isAddress(uploader)) return json({ error: "Invalid uploader" }, 400);
     if (!payee || !isAddress(payee)) return json({ error: "Invalid payee" }, 400);
     if (!mimeType || !IMAGE_TYPES.includes(mimeType)) return json({ error: "Receipt must be a JPG, PNG, WEBP or HEIC image" }, 400);
@@ -94,7 +96,11 @@ export default {
 
       const amount = extracted?.total ?? null;
       const guess = extracted?.categoryGuess?.trim().toLowerCase();
-      const categoryIndex = categories.findIndex((c) => c.name.toLowerCase() === guess);
+      const aiIndex = categories.findIndex((c) => c.name.toLowerCase() === guess);
+      if (chosen !== null && chosen >= categories.length) return json({ error: "Invalid categoryIndex" }, 400);
+      // The treasurer may file it elsewhere, but a disagreement with the AI is flagged (MEDIUM) for the adviser and the ledger.
+      const categoryIndex = chosen ?? aiIndex;
+      const categoryMismatch = chosen !== null && chosen !== aiIndex;
       const category = categories[categoryIndex];
       const remaining = category ? pesos(category.cap - category.spent) : 0;
 
@@ -114,6 +120,7 @@ export default {
         readable: extracted?.readable ?? false,
         amount,
         categoryKnown: categoryIndex >= 0,
+        categoryMismatch,
         duplicate,
         suspiciousText: extracted?.suspiciousText ?? [],
         remaining,
@@ -158,6 +165,9 @@ export default {
           label: avg > 0 ? `Compared with past ${category?.name} expenses (avg ${php(avg)})` : "No past expenses to compare yet",
         },
         { id: "injection", pass: !hidden, label: hidden ? "Hidden instructions found in receipt" : "No hidden instructions found" },
+        ...(categoryMismatch
+          ? [{ id: "category", pass: false, label: `Treasurer chose ${category?.name}; AI guessed ${categories[aiIndex]?.name ?? "none"}` }]
+          : []),
       ];
 
       const result = { receiptHash, imageUrl, extracted, categoryIndex, checks, risk: RISK[risk], reason };

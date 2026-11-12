@@ -1,17 +1,16 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { usePrivy } from "@privy-io/react-auth";
-import { parseEther } from "viem";
-import { useAccount, useBalance, usePublicClient, useReadContracts, useWriteContract } from "wagmi";
+import { useAccount, usePublicClient, useReadContracts, useWriteContract } from "wagmi";
 import Layout from "../components/Layout";
 import { Card, Chip, ErrorCard, Eyebrow, ExplorerLink, LoadingCard, ProgressBar, Row } from "../components/ui";
 import { CHAIN_ID, EXPECTED_MEMBERS, ORG_NAME, VAULT_ADDRESS } from "../config";
 import { COLLECTION_STATUS, token, vault } from "../lib/contracts";
 import { friendlyError } from "../lib/errors";
 import { formatDate, percent, peso, pesoShort, shortAddress } from "../lib/format";
+import { useOnboarding } from "../lib/useOnboarding";
 
 const REFRESH_MS = 4000;
-const MIN_GAS = parseEther("0.002"); // keep in sync with api/onboard.ts
 
 type Step = "idle" | "approving" | "paying" | "done";
 
@@ -38,30 +37,13 @@ export default function Pay() {
     ],
     query: { enabled: !!address, refetchInterval: REFRESH_MS },
   });
-  const gas = useBalance({ address, chainId: CHAIN_ID, query: { enabled: !!address, refetchInterval: REFRESH_MS } });
 
   const collection = base.data?.[0]?.result;
   const categories = base.data?.[1]?.result;
   const hasPaid = mine.data?.[0]?.result;
   const balance = mine.data?.[1]?.result;
 
-  // First login: ask the server to top up gas + test pesos once. The server re-checks the chain.
-  const [onboarding, setOnboarding] = useState(false);
-  const [onboardError, setOnboardError] = useState<string>();
-  const onboardTried = useRef(false);
-  const refetchMine = mine.refetch;
-  const refetchGas = gas.refetch;
-  useEffect(() => {
-    if (!address || balance === undefined || gas.data === undefined || onboardTried.current) return;
-    if (balance > 0n && gas.data.value >= MIN_GAS) return;
-    onboardTried.current = true;
-    setOnboarding(true);
-    fetch("/api/onboard", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ address }) })
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error("Hindi na-setup ang wallet. Subukan ulit mamaya."))))
-      .then(() => Promise.all([refetchMine(), refetchGas()]))
-      .catch((e: Error) => setOnboardError(e.message))
-      .finally(() => setOnboarding(false));
-  }, [address, balance, gas.data, refetchMine, refetchGas]);
+  const { onboarding, onboardError } = useOnboarding(address, balance, mine.refetch);
 
   const [step, setStep] = useState<Step>("idle");
   const [error, setError] = useState<string>();

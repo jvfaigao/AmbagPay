@@ -1,7 +1,7 @@
 // Gemini calls for the Treasurer Agent. The model only returns data; it never holds a key or sends a tx.
 import { GoogleGenAI } from "@google/genai";
 
-const MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash";
+const MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
 
 const SYSTEM = `You are the Treasurer Agent of a student organization's fund on AmbagPay.
 Your job: review ONE receipt and decide how risky it is to pay.
@@ -45,8 +45,11 @@ async function askJson(contents: Parameters<GoogleGenAI["models"]["generateConte
     });
     return JSON.parse(res.text ?? "") as unknown;
   };
-  // One retry: the free tier often answers 503/504 under load. 2 × 20 s still fits the 60 s function limit.
-  return call().catch(call);
+  // One retry for overload/timeouts (503/504/abort). Never retry 429: it only burns more of the free quota.
+  return call().catch((e) => {
+    if (/\b429\b|RESOURCE_EXHAUSTED/.test(String(e?.message ?? e))) throw e;
+    return call();
+  });
 }
 
 const nullable = (type: string) => ({ type: [type, "null"] });

@@ -27,7 +27,9 @@ export default function Home() {
         >
           View public ledger
         </Link>
-        <p className="text-center text-xs text-[#BFD3C9]">The officer page is coming in the next build.</p>
+        <Link to="/officer" className="text-center text-sm font-semibold text-[#BFD3C9] underline-offset-2 hover:underline">
+          Officer login
+        </Link>
       </div>
     </div>
   );

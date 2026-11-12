@@ -8,6 +8,7 @@ export type FloorInput = {
   readable: boolean;
   amount: number | null; // pesos from the receipt
   categoryKnown: boolean;
+  categoryMismatch: boolean; // treasurer picked a different category than the AI
   duplicate: boolean;
   suspiciousText: string[];
   remaining: number; // pesos left in the category
@@ -30,6 +31,7 @@ export function riskFloor(i: FloorInput): { risk: RiskLevel; reasons: string[] }
   const avg = i.pastAmounts.length ? i.pastAmounts.reduce((a, b) => a + b, 0) / i.pastAmounts.length : 0;
   if (avg > 0 && i.amount! > 1.5 * avg) medium.push("Mas mataas sa karaniwang presyo");
   if (!i.vendorSeen && i.amount! > 1000) medium.push("Bagong vendor at lampas ₱1,000");
+  if (i.categoryMismatch) medium.push("Iba ang category na pinili ng treasurer sa hula ng AI");
   if (medium.length) return { risk: 1, reasons: medium };
 
   return { risk: 0, reasons: [] };

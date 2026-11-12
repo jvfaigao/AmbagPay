@@ -8,6 +8,7 @@ const ok: FloorInput = {
   readable: true,
   amount: 850,
   categoryKnown: true,
+  categoryMismatch: false,
   duplicate: false,
   suspiciousText: [],
   remaining: 1150,
@@ -37,4 +38,5 @@ test("unusual price or big new vendor is MEDIUM", () => {
   assert.equal(riskFloor({ ...ok, amount: 1250, remaining: 5000 }).risk, 0); // just under
   assert.equal(riskFloor({ ...ok, amount: 1001, remaining: 5000, pastAmounts: [], vendorSeen: false }).risk, 1);
   assert.equal(riskFloor({ ...ok, amount: 900, pastAmounts: [], vendorSeen: false }).risk, 0); // new vendor, small amount
+  assert.equal(riskFloor({ ...ok, categoryMismatch: true }).risk, 1); // treasurer overrode the AI's category
 });

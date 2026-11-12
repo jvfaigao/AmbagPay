@@ -40,8 +40,8 @@ Deadline: **Fri Nov 13, 3:30 PM onsite**. **Feature freeze 12:00 PM.**
 - Done = a valid demo receipt returns the result card JSON + an expense id + tx hash.
 
 ### Step 4 — `/officer` (M7)
-- [ ] Upload (camera on mobile) → "Review with AI" loading → AgentResultCard
-- [ ] Pending list: approve / reject; adviser sees `needsAdviser` items; auto `executeExpense` after the last approval
+- [x] Upload (camera on mobile) → "Review with AI" loading → AgentResultCard
+- [x] Pending list: approve / reject; adviser sees `needsAdviser` items; auto `executeExpense` after the last approval
 - Done = treasurer (and adviser when needed) approves → funds move → ledger updates.
 
 ### Step 5 — Duplicate + injection path, ledger titles (M6, M8)
