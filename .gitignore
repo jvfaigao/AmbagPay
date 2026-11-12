@@ -1,0 +1,23 @@
+# secrets
+.env
+.env.*
+!.env.example
+*.pem
+serviceAccount*.json
+
+# deps / builds
+node_modules/
+dist/
+.vercel/
+
+# hardhat
+contracts/artifacts/
+contracts/cache/
+contracts/typechain-types/
+contracts/coverage/
+contracts/coverage.json
+
+# os / editor
+.DS_Store
+.idea/
+.vscode/
