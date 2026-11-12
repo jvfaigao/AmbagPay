@@ -7,12 +7,18 @@ const chain = Number(process.env.CHAIN_ID || 97) === 31337 ? hardhat : bscTestne
 const rpc = process.env.RPC_URL || process.env.BSC_TESTNET_RPC || undefined;
 
 export const TOKEN_ADDRESS = process.env.TOKEN_ADDRESS as `0x${string}`;
+export const VAULT_ADDRESS = process.env.VAULT_ADDRESS as `0x${string}`;
 
 export const publicClient = createPublicClient({ chain, transport: http(rpc) });
 
-/** Faucet = owner of MockPHP: sends the gas drip and mints test pesos. */
-export function faucetClient() {
-  const key = process.env.FAUCET_PRIVATE_KEY;
-  if (!key) throw new Error("FAUCET_PRIVATE_KEY is not set");
+function walletFrom(envName: "FAUCET_PRIVATE_KEY" | "AGENT_PRIVATE_KEY") {
+  const key = process.env[envName];
+  if (!key) throw new Error(`${envName} is not set`);
   return createWalletClient({ account: privateKeyToAccount(key as `0x${string}`), chain, transport: http(rpc) });
 }
+
+/** Faucet = owner of MockPHP: sends the gas drip and mints test pesos. */
+export const faucetClient = () => walletFrom("FAUCET_PRIVATE_KEY");
+
+/** Agent wallet: has ONLY AGENT_ROLE, so it can only propose expenses. */
+export const agentClient = () => walletFrom("AGENT_PRIVATE_KEY");

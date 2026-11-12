@@ -34,9 +34,9 @@ Deadline: **Fri Nov 13, 3:30 PM onsite**. **Feature freeze 12:00 PM.**
 - Done = log in → get tPHP → pay ₱150 → ledger shows +₱150. First real embedded-wallet tx (watch the local-RPC risk).
 
 ### Step 3 — `/api/agent/review` (M4, M5)
-- [ ] Upload → `keccak256(bytes)` → Firebase Storage
-- [ ] Fixed pipeline: Gemini read → duplicate (`receiptInUse`) → budget → history (Firestore `receipts`) → risk (code computes the floor)
-- [ ] Agent wallet `proposeExpense` (simulate first); save result in Firestore `receipts`
+- [x] Upload → `keccak256(bytes)` → Cloudinary (Firebase Storage needs a paid plan)
+- [x] Fixed pipeline: Gemini read → duplicate (`receiptInUse`) → budget → history (Firestore `receipts`) → risk (code computes the floor)
+- [x] Agent wallet `proposeExpense` (simulate first); save result in Firestore `receipts`
 - Done = a valid demo receipt returns the result card JSON + an expense id + tx hash.
 
 ### Step 4 — `/officer` (M7)
