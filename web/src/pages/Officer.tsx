@@ -3,7 +3,7 @@ import { usePrivy } from "@privy-io/react-auth";
 import { keccak256, toBytes } from "viem";
 import { useAccount, usePublicClient, useReadContracts, useWriteContract } from "wagmi";
 import Layout from "../components/Layout";
-import { Card, Chip, ErrorCard, Eyebrow, ExplorerLink, LoadingCard, Row } from "../components/ui";
+import { Card, Chip, ErrorCard, ExpenseSteps, Eyebrow, ExplorerLink, LoadingCard } from "../components/ui";
 import { CHAIN_ID, DEMO_COLLECTION_ID, ORG_NAME } from "../config";
 import { EXPENSE_STATUS, RISK_LABEL, vault } from "../lib/contracts";
 import { friendlyError } from "../lib/errors";
@@ -47,23 +47,39 @@ export default function Officer() {
   if (!ready) body = <LoadingCard label="Loading…" />;
   else if (!authenticated) {
     body = (
-      <button onClick={login} className="h-14 rounded-[14px] bg-gold text-base font-bold text-dark">
-        Officer login with Google
-      </button>
+      <Card className="flex flex-col gap-3 p-5">
+        <h1 className="font-display text-xl font-bold text-dark">For treasurers and advisers</h1>
+        <ul className="flex list-disc flex-col gap-2 pl-5 text-sm">
+          <li>Upload a receipt and the AI Treasurer Agent checks it before anything reaches the vault.</li>
+          <li>Approve or reject proposed expenses. The contract pays out only after approval.</li>
+          <li>Expenses over ₱1,000 or marked HIGH risk also need the adviser.</li>
+        </ul>
+        <button
+          onClick={login}
+          className="h-14 rounded-[14px] bg-gold text-base font-bold text-dark focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-dark"
+        >
+          Sign in with Google
+        </button>
+        <p className="text-xs text-muted">Members do not need this page. Anyone can view the public ledger.</p>
+      </Card>
     );
   } else if (!address || roles.isLoading || !categories) body = <LoadingCard />;
   else if (!isTreasurer && !isAdviser) {
     body = (
       <Card className="flex flex-col gap-1.5 text-sm">
         <p className="font-semibold text-dark">Wala kang officer role.</p>
-        <p>Ipadala ang address na ito sa admin para ma-grant ang TREASURER o ADVISER role:</p>
+        <p>Hilingin sa admin na i-grant ang TREASURER o ADVISER role sa address na ito:</p>
         <p className="break-all rounded-lg bg-[#ECE8DC] p-2 font-mono text-xs text-dark">{address}</p>
+        <p className="text-xs text-muted">Pagkatapos ma-grant, i-refresh ang page.</p>
       </Card>
     );
   } else {
     body = (
       <>
-        <Chip tone="green">{isAdviser ? "Adviser" : "Treasurer"}</Chip>
+        <p className="text-sm">
+          Signed in as <span className="font-semibold text-dark">{isAdviser ? "Adviser" : "Treasurer"}</span>
+          {isAdviser ? ": you give the second approval on big or HIGH-risk expenses." : ": upload receipts and give the first approval."}
+        </p>
         {onboarding && <p className="text-xs text-muted">Setting up your wallet…</p>}
         {onboardError && <p className="text-xs text-risk">{onboardError}</p>}
         {isTreasurer && !isAdviser && <ReviewPanel address={address} categories={categories} />}
@@ -73,7 +89,7 @@ export default function Officer() {
   }
 
   return (
-    <Layout title="Officer" subtitle={ORG_NAME}>
+    <Layout title="Officer" subtitle={ORG_NAME} footnote="The agent can only propose. The contract decides.">
       {body}
     </Layout>
   );
@@ -82,7 +98,7 @@ export default function Officer() {
 // ───────────────────────── Receipt upload + agent result ─────────────────────────
 
 type Review = {
-  extracted: { vendor: string | null; total: number | null } | null;
+  extracted: { vendor: string | null; total: number | null; items?: { name: string }[]; suspiciousText?: string[] } | null;
   categoryIndex: number;
   checks: { id: string; pass: boolean; label: string }[];
   risk: "LOW" | "MEDIUM" | "HIGH";
@@ -103,7 +119,7 @@ function ReviewPanel({ address, categories }: { address: `0x${string}`; categori
   const { getAccessToken } = usePrivy();
   const [busy, setBusy] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
-  const [result, setResult] = useState<Review>();
+  const [result, setResult] = useState<{ review: Review; previewUrl: string; at: Date }>();
   const [error, setError] = useState<string>();
 
   useEffect(() => {
@@ -138,7 +154,7 @@ function ReviewPanel({ address, categories }: { address: `0x${string}`; categori
       });
       const data = await res.json().catch(() => ({ error: "Hindi natapos ang review. Subukan ulit." }));
       if (!res.ok) throw new Error(data.error ?? "Hindi natapos ang review. Subukan ulit.");
-      setResult(data as Review);
+      setResult({ review: data as Review, previewUrl: image.previewUrl, at: new Date() });
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -147,7 +163,8 @@ function ReviewPanel({ address, categories }: { address: `0x${string}`; categori
   }
 
   return (
-    <Card className="flex flex-col gap-3">
+    <>
+    <Card className="flex flex-col gap-3 p-5">
       <Eyebrow>Upload receipt</Eyebrow>
       <label className="flex flex-col gap-1 text-sm">
         <span>Litrato ng resibo</span>
@@ -191,52 +208,109 @@ function ReviewPanel({ address, categories }: { address: `0x${string}`; categori
       <button
         onClick={onReview}
         disabled={!image || busy || !/^0x[0-9a-fA-F]{40}$/.test(payee)}
-        className="h-12 rounded-[14px] bg-gold text-base font-bold text-dark disabled:opacity-50"
+        className="h-12 rounded-[14px] bg-gold text-base font-bold text-dark focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-dark disabled:opacity-50"
+        aria-live="polite"
       >
         {busy ? LOADING_STEPS[stepIndex] : "Review with AI"}
       </button>
-      {error && <ErrorCard message={error} />}
-      {result && <AgentResultCard result={result} categories={categories} />}
+      {error && <ErrorCard title="Hindi natapos ang review" message={error} />}
     </Card>
+    {result && <AgentResult {...result} categories={categories} />}
+    </>
   );
 }
 
 const NOT_CONTRACT_BLOCKS = ["UnreadableAmount", "UnknownCategory"];
 
-function AgentResultCard({ result, categories }: { result: Review; categories: readonly Category[] }) {
-  const category = categories[result.categoryIndex]?.name ?? "—";
+/** Bold lead for each check, so the card reads like the deck: "Duplicate receipt. <detail>". */
+function checkLead(id: string, pass: boolean) {
+  const leads: Record<string, string> = {
+    duplicate: pass ? "New receipt." : "Duplicate receipt.",
+    budget: "Budget.",
+    price: "Price.",
+    injection: pass ? "No hidden instructions." : "Hidden instruction found.",
+    category: "Category changed.",
+  };
+  return leads[id] ?? "";
+}
+
+const peso2 = (n: number) => "₱" + n.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+/** The agent's verdict, laid out like docs/prototype/agent.png: receipt, review, then what the contract did. */
+function AgentResult({ review: r, previewUrl, at, categories }: { review: Review; previewUrl: string; at: Date; categories: readonly Category[] }) {
+  const category = categories[r.categoryIndex]?.name;
+  const item = r.extracted?.items?.[0]?.name;
+  const total = r.extracted?.total;
+  const border = r.risk === "HIGH" ? "border-risk" : r.risk === "LOW" ? "border-green" : "border-line";
+  const contractBlocked = r.outcome === "blocked" && !!r.blockedBy && !NOT_CONTRACT_BLOCKS.includes(r.blockedBy);
+  const hidden = r.extracted?.suspiciousText?.[0];
+
   return (
-    <div className="flex flex-col gap-2.5 rounded-2xl border border-line bg-cream p-4" aria-live="polite">
-      <div className="flex items-center justify-between">
-        <Eyebrow>Treasurer Agent</Eyebrow>
-        <RiskBadge risk={result.risk} />
+    <section className="flex flex-col gap-3" aria-live="polite" aria-label="Treasurer Agent review">
+      <Card className="flex items-center gap-4">
+        <img src={previewUrl} alt="Uploaded receipt" className="h-20 w-16 shrink-0 rounded-md border border-line object-cover" />
+        <div className="min-w-0">
+          <p className="truncate font-display text-base font-bold text-dark">{r.extracted?.vendor ?? "Vendor not readable"}</p>
+          <p className="text-sm">
+            {[item, category].filter(Boolean).join(" · ") || "No items read"}
+            {total != null && ` · ${peso2(total)}`}
+          </p>
+          <p className="text-xs text-muted">Uploaded by you · {at.toLocaleTimeString("en-PH", { hour: "numeric", minute: "2-digit" })}</p>
+        </div>
+      </Card>
+
+      <div className={`flex flex-col gap-3 rounded-2xl border bg-paper p-5 ${border}`}>
+        <div className="flex items-center justify-between">
+          <h2 className="font-display text-lg font-bold text-dark">Review result</h2>
+          <RiskBadge risk={r.risk} />
+        </div>
+        <ul className="flex flex-col gap-2.5 text-sm">
+          {r.checks.map((c) => (
+            <li key={c.id} className="flex gap-2.5">
+              <span
+                className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white ${c.pass ? "bg-green" : "bg-risk"}`}
+                role="img"
+                aria-label={c.pass ? "Passed" : "Failed"}
+              >
+                {c.pass ? "✓" : "✕"}
+              </span>
+              <span>
+                <span className="font-semibold text-dark">{checkLead(c.id, c.pass)}</span>{" "}
+                {c.id === "injection" && !c.pass && hidden ? `"${hidden}" Treated as data, ignored.` : c.label}
+              </span>
+            </li>
+          ))}
+        </ul>
+        <p className="border-t border-line pt-3 text-sm italic">"{r.reason}"</p>
       </div>
-      <Row label="Vendor" value={result.extracted?.vendor ?? "Hindi mabasa"} />
-      <Row label="Amount" value={result.extracted?.total != null ? `₱${result.extracted.total.toLocaleString("en-PH", { minimumFractionDigits: 2 })}` : "—"} />
-      <Row label="Category" value={category} />
-      <ul className="flex flex-col gap-1 text-sm">
-        {result.checks.map((c) => (
-          <li key={c.id} className={c.pass ? "text-dark" : "font-semibold text-risk"}>
-            {c.pass ? "✓" : "✗"} {c.label}
-          </li>
-        ))}
-      </ul>
-      <p className="text-sm italic">"{result.reason}"</p>
-      {result.outcome === "proposed" ? (
-        <p className="text-sm font-semibold text-green">
-          Proposed on-chain · Expense #{result.expenseId}{" "}
-          {result.txHash && <ExplorerLink path={`tx/${result.txHash}`}>BscScan</ExplorerLink>}
-        </p>
-      ) : (
-        <Chip tone="risk">
-          {result.blockedBy && !NOT_CONTRACT_BLOCKS.includes(result.blockedBy)
-            ? `Blocked by AmbagVault · ${result.blockedBy}`
-            : result.blockedBy === "UnknownCategory"
-              ? "Hindi na-propose · pumili ng category sa itaas at i-review ulit"
-              : "Hindi na-propose · kailangan ng malinaw na resibo"}
-        </Chip>
-      )}
-    </div>
+
+      <div className="flex flex-col gap-1 rounded-2xl bg-dark p-5 text-cream">
+        <p className="text-[11px] font-bold uppercase tracking-[1.5px] text-gold">Smart contract</p>
+        {r.outcome === "proposed" ? (
+          <>
+            <p className="font-display text-lg font-bold">Proposed on-chain · Expense #{r.expenseId}</p>
+            <p className="text-sm text-[#BFD3C9]">
+              No funds move until officers approve it below.{" "}
+              {r.txHash && <ExplorerLink path={`tx/${r.txHash}`}>BscScan</ExplorerLink>}
+            </p>
+          </>
+        ) : contractBlocked ? (
+          <>
+            <p className="font-display text-lg font-bold">Blocked by AmbagVault</p>
+            <p className="text-sm text-[#BFD3C9]">{r.blockedBy} · no funds moved</p>
+          </>
+        ) : (
+          <>
+            <p className="font-display text-lg font-bold">Not sent to the contract</p>
+            <p className="text-sm text-[#BFD3C9]">
+              {r.blockedBy === "UnknownCategory"
+                ? "Pumili ng category sa itaas at i-review ulit."
+                : "Hindi mabasa ang total. Kumuha ng mas malinaw na litrato at i-review ulit."}
+            </p>
+          </>
+        )}
+      </div>
+    </section>
   );
 }
 
@@ -345,10 +419,9 @@ function PendingList({ count, categories, isTreasurer, isAdviser }: { count: num
               </span>
               <span className="font-semibold text-dark">{peso(x.amount)}</span>
             </div>
+            <ExpenseSteps status={x.status} treasurer={x.treasurerApproved} adviser={x.adviserApproved} needsAdviser={needsAdviser} />
             <div className="flex flex-wrap items-center gap-2 text-xs">
               <RiskBadge risk={RISK_LABEL[x.risk]} />
-              <span>Treasurer {x.treasurerApproved ? "✓" : "—"}</span>
-              {needsAdviser && <span>Adviser {x.adviserApproved ? "✓" : "— (kailangan)"}</span>}
               <span className="text-muted">to {shortAddress(x.payee)}</span>
               {x.receiptURI && (
                 <a href={x.receiptURI} target="_blank" rel="noreferrer" className="font-semibold text-green">
@@ -361,7 +434,7 @@ function PendingList({ count, categories, isTreasurer, isAdviser }: { count: num
                 <button
                   onClick={() => approve(id, x.treasurerApproved, x.adviserApproved, needsAdviser)}
                   disabled={busyId !== undefined}
-                  className="h-10 flex-1 rounded-[12px] bg-gold text-sm font-bold text-dark disabled:opacity-50"
+                  className="h-10 flex-1 rounded-xl bg-gold text-sm font-bold text-dark disabled:opacity-50"
                 >
                   {busy ? "Sending…" : "Approve"}
                 </button>
@@ -370,7 +443,7 @@ function PendingList({ count, categories, isTreasurer, isAdviser }: { count: num
                 <button
                   onClick={() => execute(id)}
                   disabled={busyId !== undefined}
-                  className="h-10 flex-1 rounded-[12px] bg-green text-sm font-bold text-white disabled:opacity-50"
+                  className="h-10 flex-1 rounded-xl bg-green text-sm font-bold text-white disabled:opacity-50"
                 >
                   {busy ? "Sending…" : "Execute payment"}
                 </button>
@@ -378,7 +451,7 @@ function PendingList({ count, categories, isTreasurer, isAdviser }: { count: num
               <button
                 onClick={() => reject(id)}
                 disabled={busyId !== undefined}
-                className="h-10 rounded-[12px] border border-risk px-4 text-sm font-semibold text-risk disabled:opacity-50"
+                className="h-10 rounded-xl border border-risk px-4 text-sm font-semibold text-risk disabled:opacity-50"
               >
                 Reject
               </button>

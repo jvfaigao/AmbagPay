@@ -2,10 +2,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
 import { useReadContracts } from "wagmi";
 import Layout from "../components/Layout";
-import { Card, Chip, ErrorCard, Eyebrow, ExplorerLink, LoadingCard, ProgressBar, Row } from "../components/ui";
+import { Card, Chip, ErrorCard, ExpenseSteps, Eyebrow, ExplorerLink, LoadingCard, ProgressBar, Row } from "../components/ui";
 import { EXPECTED_MEMBERS, ORG_NAME, VAULT_ADDRESS } from "../config";
-import { COLLECTION_STATUS, EXPENSE_STATUS, RISK_LABEL, vault } from "../lib/contracts";
-import { formatDate, percent, peso, pesoShort } from "../lib/format";
+import { COLLECTION_STATUS, RISK_LABEL, vault } from "../lib/contracts";
+import { formatDate, percent, peso, pesoShort, shortAddress } from "../lib/format";
 
 const REFRESH_MS = 4000;
 
@@ -29,16 +29,18 @@ export default function Ledger() {
 
   // 2) Every expense, then keep only this collection's.
   const expensesQuery = useReadContracts({
-    contracts: Array.from({ length: expenseCount }, (_, i) => ({
-      ...vault,
-      functionName: "getExpense" as const,
-      args: [BigInt(i)] as const,
-    })),
+    contracts: Array.from({ length: expenseCount }, (_, i) => [
+      { ...vault, functionName: "getExpense" as const, args: [BigInt(i)] as const },
+      { ...vault, functionName: "needsAdviser" as const, args: [BigInt(i)] as const },
+    ]).flat(),
     query: { enabled: expenseCount > 0, refetchInterval: REFRESH_MS },
   });
 
-  const expenses = (expensesQuery.data ?? [])
-    .map((r, i) => ({ id: i, e: r.result }))
+  const expenses = Array.from({ length: expenseCount }, (_, i) => ({
+    id: i,
+    e: expensesQuery.data?.[i * 2]?.result as Expense | undefined,
+    needsAdviser: expensesQuery.data?.[i * 2 + 1]?.result === true,
+  }))
     .filter((x) => x.e && x.e.collectionId === collectionId)
     .reverse(); // newest first
 
@@ -106,11 +108,12 @@ export default function Ledger() {
         ))}
       </Card>
 
-      <Card className="px-4 py-1">
+      <Card className="px-4 py-3">
+        <Eyebrow>Expenses</Eyebrow>
         {expenses.length === 0 ? (
-          <p className="py-4 text-sm text-muted">Wala pang gastos sa collection na ito.</p>
+          <p className="py-4 text-sm text-muted">Wala pang gastos sa collection na ito. Bawat gastos ay lalabas dito kasama ang resibo at approvals.</p>
         ) : (
-          expenses.map(({ id: expenseId, e }) => {
+          expenses.map(({ id: expenseId, e, needsAdviser }) => {
             const exp = e!;
             const categoryName = categories[exp.categoryIndex]?.name ?? "Uncategorized";
             const offChain = receipts.data?.[expenseId];
@@ -128,10 +131,12 @@ export default function Ledger() {
                   <span className="font-semibold text-dark">{pesoShort(exp.amount)}</span>
                 </div>
                 {offChain?.reason && <p className="text-xs italic">Agent: "{offChain.reason}"</p>}
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <StatusChip status={exp.status} treasurer={exp.treasurerApproved} adviser={exp.adviserApproved} risk={exp.risk} />
+                <ExpenseSteps status={exp.status} treasurer={exp.treasurerApproved} adviser={exp.adviserApproved} needsAdviser={needsAdviser} />
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+                  <Chip tone={exp.risk === 2 ? "risk" : exp.risk === 0 ? "green" : "neutral"}>{RISK_LABEL[exp.risk]} risk</Chip>
+                  <span className="text-muted">to {shortAddress(exp.payee)}</span>
                   {exp.receiptURI && (
-                    <a href={exp.receiptURI} target="_blank" rel="noreferrer" className="text-xs font-semibold text-green">
+                    <a href={exp.receiptURI} target="_blank" rel="noreferrer" className="font-semibold text-green underline-offset-2 hover:underline">
                       Receipt ↗
                     </a>
                   )}
@@ -158,17 +163,14 @@ function Stat({ label, value }: { label: string; value: string }) {
   );
 }
 
-function StatusChip({ status, treasurer, adviser, risk }: { status: number; treasurer: boolean; adviser: boolean; risk: number }) {
-  if (status === EXPENSE_STATUS.Executed) {
-    return <Chip tone="green">Paid · {adviser ? "Treasurer + Adviser" : "Treasurer approved"}</Chip>;
-  }
-  if (status === EXPENSE_STATUS.Rejected) {
-    return <Chip tone="risk">Rejected · {RISK_LABEL[risk]} risk</Chip>;
-  }
-  const waitingFor = !treasurer ? "treasurer" : "adviser";
-  return (
-    <Chip tone={risk === 2 ? "risk" : "neutral"}>
-      Pending · waiting for {waitingFor} · {RISK_LABEL[risk]} risk
-    </Chip>
-  );
-}
+type Expense = {
+  collectionId: bigint;
+  categoryIndex: number;
+  amount: bigint;
+  payee: string;
+  receiptURI: string;
+  risk: number;
+  status: number;
+  treasurerApproved: boolean;
+  adviserApproved: boolean;
+};

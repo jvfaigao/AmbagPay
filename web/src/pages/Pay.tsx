@@ -77,14 +77,14 @@ export default function Pay() {
 
   if (base.isLoading) {
     return (
-      <Layout title="Pay" subtitle={ORG_NAME}>
+      <Layout title="AmbagPay" subtitle={ORG_NAME}>
         <LoadingCard />
       </Layout>
     );
   }
   if (!collection || !categories) {
     return (
-      <Layout title="Pay" subtitle={ORG_NAME}>
+      <Layout title="AmbagPay" subtitle={ORG_NAME}>
         <ErrorCard message={base.error?.message ?? base.data?.[0]?.error?.message ?? "Collection not found."} />
       </Layout>
     );
@@ -94,69 +94,97 @@ export default function Pay() {
   const tooPoor = balance !== undefined && balance < collection.amountPerMember;
   const busy = step === "approving" || step === "paying";
   const paid = hasPaid === true || step === "done";
+  const amount = peso(collection.amountPerMember);
+
+  // The one action on this page, pinned above the bottom nav like the deck prototype.
+  let action = null;
+  if (ready && !authenticated) {
+    action = <PrimaryButton onClick={login}>Sign in with Google to pay</PrimaryButton>;
+  } else if (ready && !paid) {
+    action = (
+      <PrimaryButton onClick={onPay} disabled={busy || onboarding || closed || tooPoor || balance === undefined}>
+        {step === "approving"
+          ? "Step 1 of 2 · Approving…"
+          : step === "paying"
+            ? "Step 2 of 2 · Paying…"
+            : closed
+              ? "Collection closed"
+              : `Pay ${amount} · no gas fee`}
+      </PrimaryButton>
+    );
+  }
 
   return (
-    <Layout title="Pay your share" subtitle={collection.name} footnote="Gas fee is covered by AmbagPay.">
-      <Card className="flex flex-col gap-2.5">
+    <Layout
+      title="AmbagPay"
+      subtitle={ORG_NAME}
+      bottom={
+        action && (
+          <>
+            {action}
+            <p className="pt-2 text-center text-xs text-muted">Secured by a smart contract on BNB Smart Chain</p>
+          </>
+        )
+      }
+    >
+      <Card className="flex flex-col gap-2.5 p-5">
         <div className="flex items-center justify-between">
-          <Eyebrow>Contribution</Eyebrow>
+          <Eyebrow>Collection</Eyebrow>
           <Chip tone={closed ? "neutral" : "green"}>{closed ? "Closed" : "Open"}</Chip>
         </div>
-        <p className="font-display text-3xl font-bold text-dark">{peso(collection.amountPerMember)}</p>
-        <Row label="Paid so far" value={`${collection.payerCount} of ${EXPECTED_MEMBERS}`} />
+        <h1 className="font-display text-xl font-bold text-dark">{collection.name}</h1>
+        <p className="font-display text-5xl font-bold tracking-tight text-dark">{amount}</p>
+        <Row label="Due" value={formatDate(collection.deadline)} />
+        <Row label="Members paid" value={`${collection.payerCount} of ${EXPECTED_MEMBERS}`} />
         <ProgressBar value={Math.min(100, (collection.payerCount / EXPECTED_MEMBERS) * 100)} />
-        <p className="text-xs text-muted">Due {formatDate(collection.deadline)}</p>
       </Card>
 
-      <Card className="flex flex-col gap-2.5">
+      <Card className="flex flex-col gap-2.5 p-5">
         <Eyebrow>Where it goes</Eyebrow>
         {categories.map((c) => (
           <div key={c.name} className="flex flex-col gap-1.5">
-            <Row label={c.name} value={`${pesoShort(c.spent)} / ${pesoShort(c.cap)}`} />
+            <Row label={c.name} value={`${pesoShort(c.spent)} spent · ${pesoShort(c.cap)} cap`} />
             <ProgressBar value={percent(c.spent, c.cap)} />
           </div>
         ))}
       </Card>
 
-      {!ready ? null : !authenticated ? (
-        <button onClick={login} className="h-14 rounded-[14px] bg-gold text-base font-bold text-dark">
-          Sign in with Google to pay
-        </button>
-      ) : paid ? (
-        <Card className="flex flex-col items-start gap-1.5">
+      {authenticated && paid ? (
+        <Card className="flex flex-col items-start gap-2 border-green p-5">
           <Chip tone="green">Paid ✓</Chip>
-          <p className="text-sm">Salamat! Makikita mo na ang bayad mo sa public ledger.</p>
+          <p className="text-sm text-dark">Salamat! Recorded na sa BNB Smart Chain ang bayad mo.</p>
           {txHash && (
             <p className="text-xs text-muted">
               Tx {shortAddress(txHash)} <ExplorerLink path={`tx/${txHash}`}>BscScan</ExplorerLink>
             </p>
           )}
-          <Link to={`/ledger/${collectionId}`} className="text-sm font-semibold text-green">
-            View public ledger →
+          <Link to={`/ledger/${collectionId}`} className="text-sm font-semibold text-green underline-offset-2 hover:underline">
+            See it on the public ledger
           </Link>
         </Card>
+      ) : authenticated ? (
+        <div className="flex flex-col gap-1 px-1">
+          <Row label="Your balance" value={balance === undefined ? "…" : `${peso(balance)} tPHP`} />
+          {onboarding && <p className="text-xs text-muted">Setting up your wallet…</p>}
+          {onboardError && <p className="text-xs text-risk">{onboardError}</p>}
+          {tooPoor && !onboarding && <p className="text-xs text-risk">Kulang ang tPHP mo para sa bayad na ito.</p>}
+        </div>
       ) : (
-        <>
-          <Card className="flex flex-col gap-1.5">
-            <Row label="Your balance" value={balance === undefined ? "…" : peso(balance)} />
-            {onboarding && <p className="text-xs text-muted">Setting up your wallet…</p>}
-            {onboardError && <p className="text-xs text-risk">{onboardError}</p>}
-            {tooPoor && !onboarding && <p className="text-xs text-risk">Kulang ang tPHP mo para sa bayad na ito.</p>}
-          </Card>
-          {error && <ErrorCard message={error} />}
-          <button
-            onClick={onPay}
-            disabled={busy || onboarding || closed || tooPoor || balance === undefined}
-            className="h-14 rounded-[14px] bg-gold text-base font-bold text-dark disabled:opacity-50"
-          >
-            {step === "approving"
-              ? "Step 1 of 2 · Approving…"
-              : step === "paying"
-                ? "Step 2 of 2 · Paying…"
-                : `Pay ${peso(collection.amountPerMember)} · no gas fee`}
-          </button>
-        </>
+        <p className="px-1 text-sm text-muted">Mag-sign in gamit ang Google. Gagawan ka ng wallet at bibigyan ng test pesos; walang gas fee.</p>
       )}
+      {error && <ErrorCard title="Hindi natuloy ang bayad" message={error} />}
     </Layout>
+  );
+}
+
+function PrimaryButton({ children, onClick, disabled }: { children: React.ReactNode; onClick: () => void; disabled?: boolean }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className="h-14 w-full rounded-[14px] bg-gold text-base font-bold text-dark shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-dark disabled:opacity-50"
+    >
+      {children}
+    </button>
   );
 }
