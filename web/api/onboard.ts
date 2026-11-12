@@ -4,8 +4,8 @@ import { mockPhpAbi } from "../src/abi/MockPHP";
 import { callerWallet } from "./_lib/auth";
 import { faucetClient, publicClient, TOKEN_ADDRESS } from "./_lib/chain";
 
-const GAS_DRIP = parseEther("0.005");
-const MIN_GAS = parseEther("0.002"); // below this a wallet cannot send a few txs; keep in sync with Pay.tsx
+const GAS_DRIP = parseEther("0.001"); // ~70 txs at 0.1 gwei; keeps the faucet alive for ~260 new users
+const MIN_GAS = parseEther("0.0005"); // below this a wallet cannot send a few txs; keep in sync with src/lib/useOnboarding.ts
 const START_BALANCE = parseEther("1000");
 
 const json = (body: object, status = 200) => Response.json(body, { status });

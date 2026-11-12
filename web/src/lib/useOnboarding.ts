@@ -4,7 +4,7 @@ import { usePrivy } from "@privy-io/react-auth";
 import { useBalance } from "wagmi";
 import { CHAIN_ID } from "../config";
 
-const MIN_GAS = parseEther("0.002"); // keep in sync with api/onboard.ts
+const MIN_GAS = parseEther("0.0005"); // keep in sync with api/onboard.ts
 
 /**
  * First login: asks /api/onboard once to top up gas (+ test pesos). The server re-checks the chain.
