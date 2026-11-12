@@ -1,12 +1,11 @@
-import { createConfig, http } from "wagmi";
+import { http } from "wagmi";
+import { createConfig } from "@privy-io/wagmi";
 import { bscTestnet, hardhat } from "viem/chains";
-import { CHAIN_ID, RPC_URL } from "./config";
+import { chain, RPC_URL } from "./config";
 
-// Read-only config for now. Phase 3 swaps this for Privy's wagmi config (Google login + embedded wallet).
+// Privy drives the connector (embedded wallet); the only chain is the one in config.ts.
+// Both ids are listed only to satisfy the type; RPC_URL already matches the active chain.
 export const wagmiConfig = createConfig({
-  chains: [bscTestnet, hardhat],
-  transports: {
-    [bscTestnet.id]: http(CHAIN_ID === 97 ? RPC_URL : undefined),
-    [hardhat.id]: http(CHAIN_ID === 31337 ? RPC_URL : undefined),
-  },
+  chains: [chain],
+  transports: { [bscTestnet.id]: http(RPC_URL), [hardhat.id]: http(RPC_URL) },
 });

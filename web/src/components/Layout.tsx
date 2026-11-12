@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
+import LoginChip from "./LoginChip";
 
 /** Phone-width page shell with the AmbagPay top bar. */
 export default function Layout({ title, subtitle, children, footnote }: {
@@ -18,10 +19,11 @@ export default function Layout({ title, subtitle, children, footnote }: {
         >
           A
         </Link>
-        <div>
+        <div className="min-w-0 flex-1">
           <p className="font-display text-lg font-bold leading-tight text-dark">{title}</p>
           {subtitle && <p className="text-xs font-medium text-muted">{subtitle}</p>}
         </div>
+        <LoginChip />
       </header>
       <main className="flex flex-1 flex-col gap-3.5 px-5">{children}</main>
       {footnote && <p className="px-5 py-5 text-center text-xs text-muted">{footnote}</p>}

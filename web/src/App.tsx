@@ -8,10 +8,10 @@ export default function App() {
     return (
       <div className="mx-auto max-w-md p-6">
         <div className="rounded-2xl border border-line bg-paper p-5 text-sm">
-          <p className="font-semibold text-dark">Contract address not set</p>
+          <p className="font-semibold text-dark">App not configured</p>
           <p className="mt-2">
-            Copy <code>.env.example</code> to <code>.env.local</code>, fill in <code>VITE_VAULT_ADDRESS</code> and{" "}
-            <code>VITE_TOKEN_ADDRESS</code>, then restart <code>npm run dev</code>.
+            Copy <code>.env.example</code> to <code>.env.local</code>, fill in <code>VITE_VAULT_ADDRESS</code>,{" "}
+            <code>VITE_TOKEN_ADDRESS</code> and <code>VITE_PRIVY_APP_ID</code>, then restart <code>npm run dev</code>.
           </p>
         </div>
       </div>

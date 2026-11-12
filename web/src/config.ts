@@ -20,4 +20,6 @@ export const ORG_NAME = "CpE Student Society";
 // Expected number of members for the demo collection ("32 of 45 paid").
 export const EXPECTED_MEMBERS = 45;
 
-export const isConfigured = VAULT_ADDRESS.startsWith("0x") && VAULT_ADDRESS.length === 42;
+export const PRIVY_APP_ID: string = env.VITE_PRIVY_APP_ID || "";
+
+export const isConfigured = VAULT_ADDRESS.startsWith("0x") && VAULT_ADDRESS.length === 42 && PRIVY_APP_ID !== "";
