@@ -20,7 +20,7 @@ Deadline: **Fri Nov 13, 3:30 PM onsite**. **Feature freeze 12:00 PM.**
 
 ### Step 0 — git + public repo
 - [x] `git init`, first commit of everything done so far
-- [ ] Create the public GitHub repo, push
+- [x] Create the GitHub repo, push (github.com/jvfaigao/AmbagPay — check it is set to public)
 - Done = repo is public and has a Nov 12 commit.
 
 ### Step 1 — Privy Google login + embedded wallet (M1)
@@ -51,10 +51,20 @@ Deadline: **Fri Nov 13, 3:30 PM onsite**. **Feature freeze 12:00 PM.**
 - Done = DEMO.md steps 4 runs as written.
 
 ### Step 6 — Mobile polish + deploy
-- [ ] Deploy + verify contracts on BSC Testnet as soon as tBNB is in; addresses in CLAUDE.md + `deployments/bscTestnet.json`; `grant-role.js`
-- [ ] 390px pass on every page, error toasts (Taglish messages from ARCHITECTURE.md)
+- [x] Deploy + verify contracts on BSC Testnet as soon as tBNB is in; addresses in CLAUDE.md + `deployments/bscTestnet.json`; `grant-role.js`
+- [x] 390px pass on every page (design pass: bottom nav, prototype screens, process steps)
 - [ ] Vercel deploy (root `web/`, server env vars set), Privy allowed origin = Vercel domain
 - Done = DEMO.md runs end to end on a phone against BSC Testnet.
+
+## Day 2 (Nov 13) — in this order. Overview: docs/SYSTEM.md
+
+- [x] **B. Agent holes** — re-photographed receipt (same vendor + total + date) → HIGH; split expenses to one payee → MEDIUM; ledger says the contract holds the money
+- [x] **A. docs/SYSTEM.md** — goal, map, money flow, limits + Q&A
+- [ ] **C. Vercel deploy + QR** — `vercel login`, env vars, Privy allowed origin; one QR PNG of `<url>/pay/0`. Done = `/pay/0` loads on a phone over mobile data
+- [ ] **D. Funds + receipts** — re-run `seed-testnet.js` (+₱1,200); make `r2-snacks-1240`. Done = vault > ₱2,100, 4 receipt files on 2 devices
+- [ ] **E. Phone rehearsal** — DEMO.md 1–6 on 2 phones + laptop, twice; QR with Chrome/Lens. Done = two clean runs
+- [ ] **F. Who paid** (only if time before 12:00) — onboard saves address → email; `/api/members` for officers; card on `/officer`
+- [ ] **G. After freeze** — README, deck screenshots, backup video, Q&A drill (SYSTEM.md §6–7)
 
 ## Timeline
 

@@ -43,6 +43,9 @@ Use fake vendors/data only (free-tier AI). Keep digital copies on two laptops.
 - **What if the AI is wrong?** It can't move money. It can only propose; code raises the risk floor; the contract and humans decide.
 - **Prompt injection?** Receipt text is data. We demo it.
 - **Students without crypto?** Google login, embedded wallet, gas covered.
+- **Where is the money?** In the AmbagVault contract's own address. No officer holds it; it leaves only through approved expenses within the caps. The ledger links to every transfer.
+- **Real money?** Demo uses test pesos. Production = PHP-backed stablecoin through a licensed on-ramp; once in the vault, the contract guards it. "Designed for a licensed on-ramp", not "ready for real money".
+- **Same receipt, new photo?** New file = new hash, so the contract can't see it, but the agent flags same vendor + amount + date as HIGH → adviser must approve.
 - **Privacy?** No names or student numbers on-chain; only wallet addresses.
 - **Why BSC?** 0.45 s blocks, low fees, EVM tools, large stablecoin base for payments.
 - **Business?** Free for class ambagan, Org Pro ₱199/sem, campus plan for student councils/OSA.
