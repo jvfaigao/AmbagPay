@@ -89,7 +89,8 @@ export default function Ledger() {
       <div className="flex gap-2">
         <Stat label="Collected" value={pesoShort(collection.totalCollected)} />
         <Stat label="Spent" value={pesoShort(collection.totalSpent)} />
-        <Stat label="Left" value={pesoShort(left)} />
+        {/* The contract does not count claimed refunds, so a closed fee shows the refund pool, not what is still in the vault. */}
+        <Stat label={closed ? "For refunds" : "Left"} value={pesoShort(left)} />
       </div>
       <p className="text-xs text-muted">
         Money is held by the AmbagVault contract, not by any officer.{" "}
@@ -104,6 +105,12 @@ export default function Ledger() {
         <Row label={`${peso(collection.amountPerMember)} per member`} value={`${collection.payerCount} of ${EXPECTED_MEMBERS} paid`} />
         <ProgressBar value={Math.min(100, (collection.payerCount / EXPECTED_MEMBERS) * 100)} />
         <p className="text-xs text-muted">Due {formatDate(collection.deadline)}</p>
+        {closed && (
+          <p className="text-sm text-dark">
+            Closed · <span className="font-semibold">{peso(collection.refundPerMember)} refund per member</span>
+            {collection.refundPerMember > 0n && <span className="text-muted"> (claim it on the Pay page)</span>}
+          </p>
+        )}
       </Card>
 
       <Card className="flex flex-col gap-2.5">

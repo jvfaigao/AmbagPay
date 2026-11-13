@@ -12,6 +12,9 @@ const CONTRACT_ERRORS: Record<string, string> = {
   NotProposer: "Wala kang permiso para dito.",
   PendingExpenses: "May pending pa na gastos.",
   NothingToClaim: "Wala kang refund na makukuha.",
+  NotOpen: "Closed na ang collection na ito.",
+  NotClosed: "Hindi pa closed ang collection.",
+  InvalidInput: "May kulang o mali sa form (pangalan, halaga o categories).",
 };
 
 export function friendlyError(e: unknown): string {

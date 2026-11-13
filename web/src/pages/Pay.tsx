@@ -13,7 +13,7 @@ import { useOnboarding } from "../lib/useOnboarding";
 
 const REFRESH_MS = 4000;
 
-type Step = "idle" | "approving" | "paying" | "done";
+type Step = "idle" | "approving" | "paying" | "done" | "claiming" | "claimed";
 
 export default function Pay() {
   const { id } = useParams();
@@ -35,6 +35,7 @@ export default function Pay() {
     contracts: [
       { ...vault, functionName: "hasPaid", args: [collectionId, address!] },
       { ...token, functionName: "balanceOf", args: [address!] },
+      { ...vault, functionName: "hasClaimed", args: [collectionId, address!] },
     ],
     query: { enabled: !!address, refetchInterval: REFRESH_MS },
   });
@@ -43,6 +44,7 @@ export default function Pay() {
   const categories = base.data?.[1]?.result;
   const hasPaid = mine.data?.[0]?.result;
   const balance = mine.data?.[1]?.result;
+  const hasClaimed = mine.data?.[2]?.result;
 
   const { onboarding, onboardError } = useOnboarding(address, balance, mine.refetch);
 
@@ -76,6 +78,21 @@ export default function Pay() {
     }
   }
 
+  async function onClaim() {
+    setError(undefined);
+    try {
+      setStep("claiming");
+      const hash = await writeContractAsync({ ...vault, functionName: "claimRefund", args: [collectionId] });
+      await confirmed(hash);
+      setTxHash(hash);
+      setStep("claimed");
+      await mine.refetch();
+    } catch (e) {
+      setError(friendlyError(e));
+      setStep("idle");
+    }
+  }
+
   if (base.isLoading) {
     return (
       <Layout title="AmbagPay" subtitle={ORG_NAME}>
@@ -93,14 +110,23 @@ export default function Pay() {
 
   const closed = collection.status === COLLECTION_STATUS.Closed;
   const tooPoor = balance !== undefined && balance < collection.amountPerMember;
-  const busy = step === "approving" || step === "paying";
+  const busy = step === "approving" || step === "paying" || step === "claiming";
   const paid = hasPaid === true || step === "done";
+  const refund = collection.refundPerMember;
+  const claimed = hasClaimed === true || step === "claimed";
+  const canClaim = closed && hasPaid === true && refund > 0n && !claimed;
   const amount = peso(collection.amountPerMember);
 
   // The one action on this page, pinned above the bottom nav like the deck prototype.
   let action = null;
   if (ready && !authenticated) {
-    action = <PrimaryButton onClick={login}>Sign in with Google to pay</PrimaryButton>;
+    action = <PrimaryButton onClick={login}>{closed ? "Sign in to claim your refund" : "Sign in with Google to pay"}</PrimaryButton>;
+  } else if (ready && canClaim) {
+    action = (
+      <PrimaryButton onClick={onClaim} disabled={busy}>
+        {step === "claiming" ? "Claiming refund…" : `Claim refund ${peso(refund)}`}
+      </PrimaryButton>
+    );
   } else if (ready && !paid) {
     action = (
       <PrimaryButton onClick={onPay} disabled={busy || onboarding || closed || tooPoor || balance === undefined}>
@@ -154,6 +180,15 @@ export default function Pay() {
         <Card className="flex flex-col items-start gap-2 border-green p-5">
           <Chip tone="green">Paid ✓</Chip>
           <p className="text-sm text-dark">Salamat! Recorded na sa BNB Smart Chain ang bayad mo.</p>
+          {closed && (
+            <p className="text-sm text-dark">
+              {claimed
+                ? `Refund claimed ✓ Naibalik na sa wallet mo ang ${peso(refund)} na sukli.`
+                : refund > 0n
+                  ? `Closed na ang collection. May sukli ka: ${peso(refund)}.`
+                  : "Closed na ang collection. Walang natirang pondo na ibabalik."}
+            </p>
+          )}
           {txHash && (
             <p className="text-xs text-muted">
               Tx {shortAddress(txHash)} <ExplorerLink path={`tx/${txHash}`}>BscScan</ExplorerLink>
