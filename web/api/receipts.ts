@@ -13,7 +13,7 @@ export default {
 
     try {
       const snap = await receipts().where("collectionId", "==", collectionId).get();
-      const expenses: Record<number, { title: string | null; risk: string; reason: string; proofType: string; note: string | null }> = {};
+      const expenses: Record<number, { title: string | null; risk: string; reason: string; proofType: string; note: string | null; txHash: string | null }> = {};
       for (const doc of snap.docs) {
         const x = doc.data();
         if (typeof x.expenseId !== "number") continue;
@@ -25,6 +25,7 @@ export default {
           reason: x.reason,
           proofType: x.proofType ?? "receipt", // older docs predate proof types
           note: x.note || null, // treasurer's public explanation when there is no receipt
+          txHash: x.txHash ?? null, // the agent's proposeExpense tx (already public on-chain)
         };
       }
       return json({ expenses });

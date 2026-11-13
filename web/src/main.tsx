@@ -7,6 +7,7 @@ import { WagmiProvider } from "@privy-io/wagmi";
 import { wagmiConfig } from "./wagmi";
 import { chain, isConfigured, PRIVY_APP_ID } from "./config";
 import App from "./App";
+import ErrorBoundary from "./components/ErrorBoundary";
 import "./index.css";
 
 const queryClient = new QueryClient();
@@ -35,7 +36,9 @@ root.render(
       <QueryClientProvider client={queryClient}>
         <WagmiProvider config={wagmiConfig}>
           <BrowserRouter>
-            <App />
+            <ErrorBoundary>
+              <App />
+            </ErrorBoundary>
           </BrowserRouter>
         </WagmiProvider>
       </QueryClientProvider>
