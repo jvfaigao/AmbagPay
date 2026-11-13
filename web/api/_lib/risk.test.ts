@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { findSimilar, isSplit, riskFloor, type FloorInput, type PastReceipt } from "./risk.ts";
 
 const ok: FloorInput = {
+  proofType: "receipt",
   aiFailed: false,
   readable: true,
   amount: 850,
@@ -43,6 +44,14 @@ test("unusual price or big new vendor is MEDIUM", () => {
   assert.equal(riskFloor({ ...ok, amount: 900, pastAmounts: [], vendorSeen: false }).risk, 0); // new vendor, small amount
   assert.equal(riskFloor({ ...ok, categoryMismatch: true }).risk, 1); // treasurer overrode the AI's category
   assert.equal(riskFloor({ ...ok, splitPattern: true }).risk, 1);
+});
+
+test("proof type: digital is MEDIUM, no receipt is always HIGH even when unreadable", () => {
+  assert.equal(riskFloor({ ...ok, proofType: "digital" }).risk, 1);
+  const none = riskFloor({ ...ok, proofType: "none", readable: false });
+  assert.equal(none.risk, 2);
+  assert.deepEqual(none.reasons, ["Walang resibo — kailangan ng adviser"]); // not also "Hindi mabasa"
+  assert.equal(riskFloor({ ...ok, proofType: "none", amount: null }).risk, 2);
 });
 
 const NOW = 1_800_000_000_000;

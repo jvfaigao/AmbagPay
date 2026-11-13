@@ -3,7 +3,12 @@
 export const RISK = ["LOW", "MEDIUM", "HIGH"] as const;
 export type RiskLevel = 0 | 1 | 2;
 
+// receipt = official receipt · digital = e-wallet/bank/online-order screenshot · none = no receipt, only a photo proof + the treasurer's explanation
+export const PROOF_TYPES = ["receipt", "digital", "none"] as const;
+export type ProofType = (typeof PROOF_TYPES)[number];
+
 export type FloorInput = {
+  proofType: ProofType;
   aiFailed: boolean;
   readable: boolean;
   amount: number | null; // pesos from the receipt
@@ -42,7 +47,9 @@ export function isSplit(past: PastReceipt[], payee: string, amount: number | nul
 export function riskFloor(i: FloorInput): { risk: RiskLevel; reasons: string[] } {
   const high: string[] = [];
   if (i.aiFailed) high.push("AI review unavailable — kailangan ng human review");
-  if (!i.readable) high.push("Hindi mabasa ang resibo");
+  // No receipt = the adviser must always approve (HIGH forces it in the contract). The photo is only proof, so it need not be readable.
+  if (i.proofType === "none") high.push("Walang resibo — kailangan ng adviser");
+  else if (!i.readable) high.push("Hindi mabasa ang resibo");
   if (i.amount === null || !(i.amount > 0)) high.push("Walang malinaw na total sa resibo");
   if (!i.categoryKnown) high.push("Hindi tugma sa kahit anong category");
   if (i.duplicate) high.push("Nagamit na ang resibong ito");
@@ -53,6 +60,7 @@ export function riskFloor(i: FloorInput): { risk: RiskLevel; reasons: string[] }
   if (high.length) return { risk: 2, reasons: high };
 
   const medium: string[] = [];
+  if (i.proofType === "digital") medium.push("Digital proof lang, hindi official receipt");
   const avg = i.pastAmounts.length ? i.pastAmounts.reduce((a, b) => a + b, 0) / i.pastAmounts.length : 0;
   if (avg > 0 && i.amount! > 1.5 * avg) medium.push("Mas mataas sa karaniwang presyo");
   if (!i.vendorSeen && i.amount! > 1000) medium.push("Bagong vendor at lampas ₱1,000");

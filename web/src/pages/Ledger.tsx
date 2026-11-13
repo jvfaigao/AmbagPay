@@ -50,7 +50,7 @@ export default function Ledger() {
     queryFn: async () => {
       const res = await fetch(`/api/receipts?collectionId=${collectionId}`);
       if (!res.ok) throw new Error("receipts unavailable");
-      return (await res.json()).expenses as Record<number, { title: string | null; reason: string }>;
+      return (await res.json()).expenses as Record<number, { title: string | null; reason: string; proofType?: string; note?: string | null }>;
     },
     refetchInterval: 10_000,
     retry: false,
@@ -140,6 +140,17 @@ export default function Ledger() {
                   <span className="font-semibold text-dark">{pesoShort(exp.amount)}</span>
                 </div>
                 {offChain?.reason && <p className="text-xs italic">Agent: "{offChain.reason}"</p>}
+                {offChain?.proofType === "none" && (
+                  <p className="flex flex-wrap items-center gap-1.5 text-xs">
+                    <Chip tone="risk">No receipt</Chip>
+                    {offChain.note && <span>Treasurer: "{offChain.note}"</span>}
+                  </p>
+                )}
+                {offChain?.proofType === "digital" && (
+                  <p className="text-xs">
+                    <Chip tone="neutral">Digital proof</Chip>
+                  </p>
+                )}
                 <ExpenseSteps status={exp.status} treasurer={exp.treasurerApproved} adviser={exp.adviserApproved} needsAdviser={needsAdviser} />
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
                   <Chip tone={exp.risk === 2 ? "risk" : exp.risk === 0 ? "green" : "neutral"}>{RISK_LABEL[exp.risk]} risk</Chip>

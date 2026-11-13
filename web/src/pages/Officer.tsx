@@ -127,6 +127,11 @@ function ReviewPanel({ address, categories }: { address: `0x${string}`; categori
   const [image, setImage] = useState<{ base64: string; mimeType: string; previewUrl: string }>();
   const [payee, setPayee] = useState<string>(address);
   const [categoryIndex, setCategoryIndex] = useState<number | null>(null); // null = let the AI choose
+  const [proofType, setProofType] = useState<"receipt" | "digital" | "none">("receipt");
+  const [amount, setAmount] = useState("");
+  const [note, setNote] = useState("");
+  const noReceipt = proofType === "none";
+  const noReceiptReady = !noReceipt || (Number(amount) >= 1 && note.trim().length >= 10 && categoryIndex !== null);
   const { getAccessToken } = usePrivy();
   const [busy, setBusy] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
@@ -161,6 +166,8 @@ function ReviewPanel({ address, categories }: { address: `0x${string}`; categori
           mimeType: image.mimeType,
           payee,
           categoryIndex,
+          proofType,
+          ...(noReceipt && { amount: Number(amount), note: note.trim() }),
         }),
       });
       const data = await res.json().catch(() => ({ error: "Hindi natapos ang review. Subukan ulit." }));
@@ -178,7 +185,22 @@ function ReviewPanel({ address, categories }: { address: `0x${string}`; categori
     <Card className="flex flex-col gap-3 p-5">
       <Eyebrow>Upload receipt</Eyebrow>
       <label className="flex flex-col gap-1 text-sm">
-        <span>Litrato ng resibo</span>
+        <span>Uri ng proof</span>
+        <select
+          value={proofType}
+          onChange={(e) => setProofType(e.target.value as typeof proofType)}
+          disabled={busy}
+          className="rounded-[10px] border border-line bg-white px-3 py-2"
+        >
+          <option value="receipt">Official receipt</option>
+          <option value="digital">Digital proof (GCash, bank, online order screenshot)</option>
+          <option value="none">Walang resibo (litrato lang ng binili)</option>
+        </select>
+        {proofType === "digital" && <span className="text-xs text-muted">Magiging MEDIUM risk at may label sa ledger.</span>}
+        {noReceipt && <span className="text-xs text-muted">Laging HIGH risk: kailangan ng adviser. Makikita ng lahat ang paliwanag sa public ledger.</span>}
+      </label>
+      <label className="flex flex-col gap-1 text-sm">
+        <span>{noReceipt ? "Litrato ng proof (binili, chat, atbp.)" : proofType === "digital" ? "Screenshot ng proof" : "Litrato ng resibo"}</span>
         <input
           type="file"
           accept="image/*"
@@ -197,7 +219,7 @@ function ReviewPanel({ address, categories }: { address: `0x${string}`; categori
           disabled={busy}
           className="rounded-[10px] border border-line bg-white px-3 py-2"
         >
-          <option value="">Hayaan ang AI pumili</option>
+          <option value="">{noReceipt ? "Pumili ng category" : "Hayaan ang AI pumili"}</option>
           {categories.map((c, i) => (
             <option key={c.name} value={i}>
               {c.name}
@@ -206,6 +228,36 @@ function ReviewPanel({ address, categories }: { address: `0x${string}`; categori
         </select>
         <span className="text-xs text-muted">Kapag iba sa hula ng AI, magiging MEDIUM risk ito para makita ng adviser.</span>
       </label>
+      {noReceipt && (
+        <>
+          <label className="flex flex-col gap-1 text-sm">
+            <span>Halaga (₱)</span>
+            <input
+              type="number"
+              inputMode="decimal"
+              min={1}
+              step="0.01"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              disabled={busy}
+              className="rounded-[10px] border border-line bg-white px-3 py-2"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            <span>Bakit walang resibo?</span>
+            <textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              maxLength={300}
+              rows={2}
+              disabled={busy}
+              placeholder="Hal.: Binili sa palengke, walang resibo ang tindera."
+              className="rounded-[10px] border border-line bg-white px-3 py-2"
+            />
+            <span className="text-xs text-muted">10–300 characters. Public ito sa ledger.</span>
+          </label>
+        </>
+      )}
       <label className="flex flex-col gap-1 text-sm">
         <span>Ibabalik kanino? (default: ikaw, ang nag-abono)</span>
         <input
@@ -218,7 +270,7 @@ function ReviewPanel({ address, categories }: { address: `0x${string}`; categori
       </label>
       <button
         onClick={onReview}
-        disabled={!image || busy || !/^0x[0-9a-fA-F]{40}$/.test(payee)}
+        disabled={!image || busy || !noReceiptReady || !/^0x[0-9a-fA-F]{40}$/.test(payee)}
         className="h-12 rounded-[14px] bg-gold text-base font-bold text-dark focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-dark disabled:opacity-50"
         aria-live="polite"
       >
@@ -243,6 +295,7 @@ function checkLead(id: string, pass: boolean) {
     category: "Category changed.",
     similar: "Possible duplicate.",
     split: "Possible split.",
+    proof: "No official receipt.",
   };
   return leads[id] ?? "";
 }
