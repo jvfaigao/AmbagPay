@@ -61,7 +61,7 @@ Deadline: **Fri Nov 13, 3:30 PM onsite**. **Feature freeze 12:00 PM.**
 - [x] **B. Agent holes** — re-photographed receipt (same vendor + total + date) → HIGH; split expenses to one payee → MEDIUM; ledger says the contract holds the money
 - [x] **A. docs/SYSTEM.md** — goal, map, money flow, limits + Q&A
 - [x] **C. Vercel deploy + QR** (https://ambagpay.vercel.app, `docs/qr-pay.png`; Jv: add the domain to Privy allowed origins) — `vercel login`, env vars, Privy allowed origin; one QR PNG of `<url>/pay/0`. Done = `/pay/0` loads on a phone over mobile data
-- [ ] **D. Funds + receipts** — re-run `seed-testnet.js` (+₱1,200); make `r2-snacks-1240`. Done = vault > ₱2,100, 4 receipt files on 2 devices
+- [x] **D. Funds + receipts** (vault ₱2,250 left; files in `docs/demo-receipts/`) — re-run `seed-testnet.js` (+₱1,200); make `r2-snacks-1240`. Done = vault > ₱2,100, 4 receipt files on 2 devices
 - [ ] **E. Phone rehearsal** — DEMO.md 1–6 on 2 phones + laptop, twice; QR with Chrome/Lens. Done = two clean runs
 - [ ] **F. Who paid** (only if time before 12:00) — onboard saves address → email; `/api/members` for officers; card on `/officer`
 - [ ] **G. After freeze** — README, deck screenshots, backup video, Q&A drill (SYSTEM.md §6–7)
