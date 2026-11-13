@@ -17,7 +17,7 @@ export default {
 
     // Only a logged-in Privy user, and only their own wallet: random addresses cannot drain the faucet.
     const account = await callerAccount(request);
-    if (!account) return json({ error: "Mag-login muna." }, 401);
+    if (!account) return json({ error: "Please sign in first." }, 401);
     const { address, email } = account;
 
     // Remember Google email → wallet so officers can match the class list to on-chain payments. Fail-soft.

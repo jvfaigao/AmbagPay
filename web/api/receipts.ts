@@ -30,7 +30,7 @@ export default {
       return json({ expenses });
     } catch (e) {
       console.error("receipts failed:", e instanceof Error ? e.message : e);
-      return json({ error: "Hindi ma-load ang mga resibo." }, 500);
+      return json({ error: "Could not load the receipts." }, 500);
     }
   },
 };

@@ -74,10 +74,10 @@ export default function Officer() {
   else if (!isTreasurer && !isAdviser && !isAdmin) {
     body = (
       <Card className="flex flex-col gap-1.5 text-sm">
-        <p className="font-semibold text-dark">Wala kang officer role.</p>
-        <p>Hilingin sa admin na i-grant ang TREASURER o ADVISER role sa address na ito:</p>
+        <p className="font-semibold text-dark">You do not have an officer role.</p>
+        <p>Ask the admin to grant the TREASURER or ADVISER role to this address:</p>
         <p className="break-all rounded-lg bg-[#ECE8DC] p-2 font-mono text-xs text-dark">{address}</p>
-        <p className="text-xs text-muted">Pagkatapos ma-grant, i-refresh ang page.</p>
+        <p className="text-xs text-muted">After it is granted, refresh this page.</p>
       </Card>
     );
   } else {
@@ -194,8 +194,8 @@ function ReviewPanel({ collectionId, address, categories }: { collectionId: bigi
           ...(noReceipt && { amount: Number(amount), note: note.trim() }),
         }),
       });
-      const data = await res.json().catch(() => ({ error: "Hindi natapos ang review. Subukan ulit." }));
-      if (!res.ok) throw new Error(data.error ?? "Hindi natapos ang review. Subukan ulit.");
+      const data = await res.json().catch(() => ({ error: "The review did not finish. Please try again." }));
+      if (!res.ok) throw new Error(data.error ?? "The review did not finish. Please try again.");
       setResult({ review: data as Review, previewUrl: image.previewUrl, at: new Date() });
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -209,7 +209,7 @@ function ReviewPanel({ collectionId, address, categories }: { collectionId: bigi
     <Card className="flex flex-col gap-3 p-5">
       <Eyebrow>Upload receipt</Eyebrow>
       <label className="flex flex-col gap-1 text-sm">
-        <span>Uri ng proof</span>
+        <span>Proof type</span>
         <select
           value={proofType}
           onChange={(e) => setProofType(e.target.value as typeof proofType)}
@@ -218,13 +218,13 @@ function ReviewPanel({ collectionId, address, categories }: { collectionId: bigi
         >
           <option value="receipt">Official receipt</option>
           <option value="digital">Digital proof (GCash, bank, online order screenshot)</option>
-          <option value="none">Walang resibo (litrato lang ng binili)</option>
+          <option value="none">No receipt (photo of the item only)</option>
         </select>
-        {proofType === "digital" && <span className="text-xs text-muted">Magiging MEDIUM risk at may label sa ledger.</span>}
-        {noReceipt && <span className="text-xs text-muted">Laging HIGH risk: kailangan ng adviser. Makikita ng lahat ang paliwanag sa public ledger.</span>}
+        {proofType === "digital" && <span className="text-xs text-muted">Becomes MEDIUM risk and is labeled on the ledger.</span>}
+        {noReceipt && <span className="text-xs text-muted">Always HIGH risk: the adviser must approve. Your explanation is shown on the public ledger.</span>}
       </label>
       <label className="flex flex-col gap-1 text-sm">
-        <span>{noReceipt ? "Litrato ng proof (binili, chat, atbp.)" : proofType === "digital" ? "Screenshot ng proof" : "Litrato ng resibo"}</span>
+        <span>{noReceipt ? "Photo of the proof (item, chat, etc.)" : proofType === "digital" ? "Screenshot of the proof" : "Photo of the receipt"}</span>
         <input
           type="file"
           accept="image/*"
@@ -243,19 +243,19 @@ function ReviewPanel({ collectionId, address, categories }: { collectionId: bigi
           disabled={busy}
           className="rounded-[10px] border border-line bg-white px-3 py-2"
         >
-          <option value="">{noReceipt ? "Pumili ng category" : "Hayaan ang AI pumili"}</option>
+          <option value="">{noReceipt ? "Choose a category" : "Let the AI choose"}</option>
           {categories.map((c, i) => (
             <option key={c.name} value={i}>
               {c.name}
             </option>
           ))}
         </select>
-        <span className="text-xs text-muted">Kapag iba sa hula ng AI, magiging MEDIUM risk ito para makita ng adviser.</span>
+        <span className="text-xs text-muted">If it differs from the AI's guess, it becomes MEDIUM risk so the adviser sees it.</span>
       </label>
       {noReceipt && (
         <>
           <label className="flex flex-col gap-1 text-sm">
-            <span>Halaga (₱)</span>
+            <span>Amount (₱)</span>
             <input
               type="number"
               inputMode="decimal"
@@ -268,29 +268,29 @@ function ReviewPanel({ collectionId, address, categories }: { collectionId: bigi
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span>Bakit walang resibo?</span>
+            <span>Why is there no receipt?</span>
             <textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
               maxLength={300}
               rows={2}
               disabled={busy}
-              placeholder="Hal.: Binili sa palengke, walang resibo ang tindera."
+              placeholder="e.g. Bought at the market; the seller had no receipts."
               className="rounded-[10px] border border-line bg-white px-3 py-2"
             />
-            <span className="text-xs text-muted">10–300 characters. Public ito sa ledger.</span>
+            <span className="text-xs text-muted">10–300 characters. This is public on the ledger.</span>
           </label>
         </>
       )}
       <label className="flex flex-col gap-1 text-sm">
-        <span>Ibabalik kanino? (default: ikaw, ang nag-abono)</span>
+        <span>Reimburse to (default: you, who paid upfront)</span>
         <input
           value={payee}
           onChange={(e) => setPayee(e.target.value.trim())}
           disabled={busy}
           className="rounded-[10px] border border-line bg-white px-3 py-2 font-mono text-xs"
         />
-        <span className="text-xs text-muted">Walang wallet ang vendor, kaya ire-reimburse ng vault ang nag-abono.</span>
+        <span className="text-xs text-muted">Vendors have no wallet, so the vault reimburses whoever paid upfront.</span>
       </label>
       <button
         onClick={onReview}
@@ -300,7 +300,7 @@ function ReviewPanel({ collectionId, address, categories }: { collectionId: bigi
       >
         {busy ? LOADING_STEPS[stepIndex] : "Review with AI"}
       </button>
-      {error && <ErrorCard title="Hindi natapos ang review" message={error} />}
+      {error && <ErrorCard title="The review did not finish" message={error} />}
     </Card>
     {result && <AgentResult {...result} categories={categories} />}
     </>
@@ -394,8 +394,8 @@ function AgentResult({ review: r, previewUrl, at, categories }: { review: Review
             <p className="font-display text-lg font-bold">Not sent to the contract</p>
             <p className="text-sm text-[#BFD3C9]">
               {r.blockedBy === "UnknownCategory"
-                ? "Pumili ng category sa itaas at i-review ulit."
-                : "Hindi mabasa ang total. Kumuha ng mas malinaw na litrato at i-review ulit."}
+                ? "Choose a category above and review again."
+                : "The total is unreadable. Take a clearer photo and review again."}
             </p>
           </>
         )}
@@ -450,7 +450,7 @@ function PendingList({
 
   async function send(hash: `0x${string}`) {
     const receipt = await publicClient!.waitForTransactionReceipt({ hash });
-    if (receipt.status !== "success") throw new Error("Hindi natuloy ang transaction.");
+    if (receipt.status !== "success") throw new Error("The transaction did not go through.");
     return hash;
   }
 
@@ -464,9 +464,9 @@ function PendingList({
       const adviser = adviserDone || isAdviser;
       if (treasurer && (!needsAdviser || adviser)) {
         const hash = await send(await writeContractAsync({ ...vault, functionName: "executeExpense", args: [BigInt(id)] }));
-        setMessage({ id, text: `Bayad na sa vendor · tx ${shortAddress(hash)}` });
+        setMessage({ id, text: `Paid out · tx ${shortAddress(hash)}` });
       } else {
-        setMessage({ id, text: "Approved. Hinihintay ang adviser." });
+        setMessage({ id, text: "Approved. Waiting for the adviser." });
       }
       await rows.refetch();
     } catch (e) {
@@ -480,7 +480,7 @@ function PendingList({
     setBusyId(id);
     try {
       const hash = await send(await writeContractAsync({ ...vault, functionName: "executeExpense", args: [BigInt(id)] }));
-      setMessage({ id, text: `Bayad na sa vendor · tx ${shortAddress(hash)}` });
+      setMessage({ id, text: `Paid out · tx ${shortAddress(hash)}` });
       await rows.refetch();
     } catch (e) {
       setMessage({ id, text: friendlyError(e), error: true });
@@ -490,7 +490,7 @@ function PendingList({
   }
 
   async function reject(id: number) {
-    const reason = window.prompt("Bakit ire-reject?", "Hindi tugma sa resibo");
+    const reason = window.prompt("Why reject it?", "Does not match the receipt");
     if (reason === null) return;
     setBusyId(id);
     try {
@@ -507,7 +507,7 @@ function PendingList({
   return (
     <Card className="flex flex-col gap-1 px-4 py-3">
       <Eyebrow>Pending expenses</Eyebrow>
-      {pending.length === 0 && <p className="py-2 text-sm text-muted">Walang pending na gastos.</p>}
+      {pending.length === 0 && <p className="py-2 text-sm text-muted">No pending expenses.</p>}
       {pending.map(({ id, e, needsAdviser }) => {
         const x = e!;
         const ready = x.treasurerApproved && (!needsAdviser || x.adviserApproved);

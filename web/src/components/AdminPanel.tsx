@@ -39,7 +39,7 @@ export default function AdminPanel({ address }: { address: `0x${string}` }) {
     try {
       const result = await send();
       const receipt = await publicClient!.waitForTransactionReceipt({ hash: result.hash });
-      if (receipt.status !== "success") throw new Error("Hindi natuloy ang transaction.");
+      if (receipt.status !== "success") throw new Error("The transaction did not go through.");
       setDone(result);
       await refetch();
     } catch (e) {
@@ -61,19 +61,19 @@ export default function AdminPanel({ address }: { address: `0x${string}` }) {
       setAmount("");
       setDue("");
       setCats([{ name: "", cap: "" }]);
-      return { text: `Nagawa ang "${name.trim()}".`, id, hash };
+      return { text: `Created "${name.trim()}".`, id, hash };
     });
   }
 
   function onClose(id: bigint, feeName: string) {
     const ok = confirm(
-      `I-close ang "${feeName}"? Hindi na ito mababawi: wala nang makakabayad, at hahatiin ang natirang pondo bilang refund sa lahat ng nagbayad.`,
+      `Close "${feeName}"? This cannot be undone: nobody can pay it anymore, and the leftover is split as a refund among everyone who paid.`,
     );
     if (!ok) return;
     run(id.toString(), async () => {
       await publicClient!.simulateContract({ ...vault, account: address, functionName: "closeCollection", args: [id] });
       const hash = await writeContractAsync({ ...vault, functionName: "closeCollection", args: [id] });
-      return { text: `Closed na ang "${feeName}". Pwede nang i-claim ng mga nagbayad ang refund sa Pay page.`, id, hash };
+      return { text: `"${feeName}" is closed. Members who paid can now claim their refund on the Pay page.`, id, hash };
     });
   }
 
@@ -113,15 +113,15 @@ export default function AdminPanel({ address }: { address: `0x${string}` }) {
       </ul>
 
       <details className="flex flex-col gap-3 text-sm">
-        <summary className="cursor-pointer font-semibold text-dark">+ Gumawa ng bagong fee</summary>
+        <summary className="cursor-pointer font-semibold text-dark">+ Create a new fee</summary>
         <div className="mt-3 flex flex-col gap-3">
           <label className="flex flex-col gap-1">
-            <span>Pangalan</span>
-            <input value={name} onChange={(e) => setName(e.target.value)} maxLength={60} placeholder="Hal.: Org Shirt" disabled={!!busy} className={input} />
+            <span>Name</span>
+            <input value={name} onChange={(e) => setName(e.target.value)} maxLength={60} placeholder="e.g. Org Shirt" disabled={!!busy} className={input} />
           </label>
           <div className="flex gap-2">
             <label className="flex flex-1 flex-col gap-1">
-              <span>Halaga bawat member (₱)</span>
+              <span>Amount per member (₱)</span>
               <input value={amount} onChange={(e) => setAmount(e.target.value.trim())} inputMode="decimal" placeholder="250" disabled={!!busy} className={input} />
             </label>
             <label className="flex flex-1 flex-col gap-1">
@@ -130,7 +130,7 @@ export default function AdminPanel({ address }: { address: `0x${string}` }) {
             </label>
           </div>
           <fieldset className="flex flex-col gap-2">
-            <legend className="mb-1">Saan mapupunta (category + budget cap ₱)</legend>
+            <legend className="mb-1">Where it goes (category + budget cap ₱)</legend>
             {cats.map((c, i) => (
               <div key={i} className="flex gap-2">
                 <input
@@ -190,7 +190,7 @@ export default function AdminPanel({ address }: { address: `0x${string}` }) {
           )}
         </div>
       )}
-      {error && <ErrorCard title="Hindi natuloy" message={error} />}
+      {error && <ErrorCard title="Did not go through" message={error} />}
     </Card>
   );
 }

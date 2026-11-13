@@ -54,7 +54,7 @@ export default function Pay() {
 
   async function confirmed(hash: `0x${string}`) {
     const receipt = await publicClient!.waitForTransactionReceipt({ hash });
-    if (receipt.status !== "success") throw new Error("Hindi natuloy ang transaction.");
+    if (receipt.status !== "success") throw new Error("The transaction did not go through.");
   }
 
   async function onPay() {
@@ -179,14 +179,14 @@ export default function Pay() {
       {authenticated && paid ? (
         <Card className="flex flex-col items-start gap-2 border-green p-5">
           <Chip tone="green">Paid ✓</Chip>
-          <p className="text-sm text-dark">Salamat! Recorded na sa BNB Smart Chain ang bayad mo.</p>
+          <p className="text-sm text-dark">Thank you! Your payment is recorded on BNB Smart Chain.</p>
           {closed && (
             <p className="text-sm text-dark">
               {claimed
-                ? `Refund claimed ✓ Naibalik na sa wallet mo ang ${peso(refund)} na sukli.`
+                ? `Refund claimed ✓ ${peso(refund)} was returned to your wallet.`
                 : refund > 0n
-                  ? `Closed na ang collection. May sukli ka: ${peso(refund)}.`
-                  : "Closed na ang collection. Walang natirang pondo na ibabalik."}
+                  ? `This collection is closed. Your refund: ${peso(refund)}.`
+                  : "This collection is closed. No funds were left to refund."}
             </p>
           )}
           {txHash && (
@@ -203,12 +203,12 @@ export default function Pay() {
           <Row label="Your balance" value={balance === undefined ? "…" : `${peso(balance)} tPHP`} />
           {onboarding && <p className="text-xs text-muted">Setting up your wallet…</p>}
           {onboardError && <p className="text-xs text-risk">{onboardError}</p>}
-          {tooPoor && !onboarding && <p className="text-xs text-risk">Kulang ang tPHP mo para sa bayad na ito.</p>}
+          {tooPoor && !onboarding && <p className="text-xs text-risk">Not enough tPHP for this payment.</p>}
         </div>
       ) : (
-        <p className="px-1 text-sm text-muted">Mag-sign in gamit ang Google. Gagawan ka ng wallet at bibigyan ng test pesos; walang gas fee.</p>
+        <p className="px-1 text-sm text-muted">Sign in with Google. We create a wallet for you and give you test pesos; no gas fee.</p>
       )}
-      {error && <ErrorCard title="Hindi natuloy ang bayad" message={error} />}
+      {error && <ErrorCard title="Payment failed" message={error} />}
       <FeeList currentId={collectionId} member={address} />
     </Layout>
   );

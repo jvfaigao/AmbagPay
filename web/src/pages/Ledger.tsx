@@ -127,7 +127,7 @@ export default function Ledger() {
       <Card className="px-4 py-3 lg:px-6 lg:py-5">
         <Eyebrow>Expenses</Eyebrow>
         {expenses.length === 0 ? (
-          <p className="py-4 text-sm text-muted">Wala pang gastos sa collection na ito. Bawat gastos ay lalabas dito kasama ang resibo at approvals.</p>
+          <p className="py-4 text-sm text-muted">No expenses in this collection yet. Every expense shows up here with its receipt and approvals.</p>
         ) : (
           expenses.map(({ id: expenseId, e, needsAdviser }) => {
             const exp = e!;

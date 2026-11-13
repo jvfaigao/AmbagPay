@@ -42,10 +42,10 @@ export default {
     const note = proofType === "none" ? String(body?.note ?? "").trim() : "";
     const typedAmount = body?.amount;
     if (proofType === "none") {
-      if (note.length < 10 || note.length > 300) return json({ error: "Ipaliwanag kung bakit walang resibo (10–300 characters)." }, 400);
+      if (note.length < 10 || note.length > 300) return json({ error: "Explain why there is no receipt (10–300 characters)." }, 400);
       if (typeof typedAmount !== "number" || !Number.isFinite(typedAmount) || typedAmount < 1 || typedAmount > 1_000_000)
-        return json({ error: "Ilagay ang halaga ng binili." }, 400);
-      if (chosenIndex == null) return json({ error: "Pumili ng category para sa gastos na walang resibo." }, 400);
+        return json({ error: "Enter the amount paid." }, 400);
+      if (chosenIndex == null) return json({ error: "Choose a category for an expense with no receipt." }, 400);
     }
     if (!Number.isInteger(collectionId) || collectionId! < 0) return json({ error: "Invalid collectionId" }, 400);
     const chosen = chosenIndex ?? null; // treasurer's category pick; null = let the AI choose
@@ -60,9 +60,9 @@ export default {
     try {
       // The uploader is proven by the Privy token, not taken from the body.
       const uploader = await callerWallet(request);
-      if (!uploader) return json({ error: "Mag-login muna." }, 401);
+      if (!uploader) return json({ error: "Please sign in first." }, 401);
       const isTreasurer = await publicClient.readContract({ ...vault, functionName: "hasRole", args: [TREASURER_ROLE, uploader] });
-      if (!isTreasurer) return json({ error: "Treasurer lang ang puwedeng mag-upload ng resibo." }, 403);
+      if (!isTreasurer) return json({ error: "Only the treasurer can upload receipts." }, 403);
 
       // 2) Hash is computed here from the raw bytes, never by the client or the model.
       const receiptHash = keccak256(bytes);
@@ -92,9 +92,9 @@ export default {
           imageUrl: original?.imageUrl ?? "",
           extracted: original?.extracted ?? null,
           categoryIndex: original?.categoryIndex ?? -1,
-          checks: [{ id: "duplicate", pass: false, label: `Nagamit na ang resibong ito${seenAs}` }],
+          checks: [{ id: "duplicate", pass: false, label: `This receipt was already used${seenAs}` }],
           risk: "HIGH",
-          reason: `Nagamit na ang resibong ito${seenAs}. Hinarang ng AmbagVault; walang perang gumalaw.`,
+          reason: `This receipt was already used${seenAs}. Blocked by AmbagVault; no money moved.`,
           outcome: "blocked",
           blockedBy,
         });
@@ -176,12 +176,12 @@ export default {
       const risk = Math.max(floor.risk, modelRisk) as RiskLevel;
       const reason = model
         ? model.reason + (floor.reasons.length ? ` (${floor.reasons.join("; ")})` : "")
-        : floor.reasons.join("; ") || "AI review unavailable — kailangan ng human review";
+        : floor.reasons.join("; ") || "AI review unavailable — needs human review";
 
       const avg = pastAmounts.length ? pastAmounts.reduce((a, b) => a + b, 0) / pastAmounts.length : 0;
       const hidden = (extracted?.suspiciousText.length ?? 0) > 0 || !!model?.flags.includes("hidden_instruction");
       const checks = [
-        { id: "duplicate", pass: !duplicate, label: duplicate ? "Nagamit na ang resibong ito" : "Receipt not used before" },
+        { id: "duplicate", pass: !duplicate, label: duplicate ? "This receipt was already used" : "Receipt not used before" },
         {
           id: "budget",
           pass: amount !== null && amount <= remaining,
@@ -198,7 +198,7 @@ export default {
           : []),
         ...(splitPattern ? [{ id: "split", pass: false, label: `Several small expenses to the same payee within 24 h add up to over ${php(pesos(adviserThreshold))}` }] : []),
         ...(proofType !== "receipt"
-          ? [{ id: "proof", pass: false, label: proofType === "none" ? "Walang official receipt. Litrato lang ang proof; kailangan ng adviser." : "Digital proof (screenshot), hindi official receipt." }]
+          ? [{ id: "proof", pass: false, label: proofType === "none" ? "No official receipt. The proof is only a photo; the adviser must approve." : "Digital proof (screenshot), not an official receipt." }]
           : []),
         ...(categoryMismatch
           ? [{ id: "category", pass: false, label: `Treasurer chose ${category?.name}; AI guessed ${categories[aiIndex]?.name ?? "none"}` }]
@@ -239,7 +239,7 @@ export default {
       return json({ ...result, outcome: "proposed", expenseId, txHash, blockedBy: null });
     } catch (e) {
       console.error("review failed:", errText(e));
-      return json({ error: "Hindi natapos ang review. Subukan ulit." }, 500);
+      return json({ error: "The review did not finish. Please try again." }, 500);
     }
   },
 };

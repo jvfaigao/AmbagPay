@@ -38,7 +38,7 @@ export function useOnboarding(address: `0x${string}` | undefined, tphp: bigint |
       .then(async (r) => {
         if (r.ok) return r.json();
         const reason = ((await r.json().catch(() => null)) as { error?: string } | null)?.error ?? `HTTP ${r.status}`;
-        throw new Error(`Hindi na-setup ang wallet (${reason}). Subukan ulit mamaya.`);
+        throw new Error(`Could not set up your wallet (${reason}). Please try again later.`);
       })
       .then(() => Promise.all([refetchGas(), onDoneRef.current()]))
       .catch((e: Error) => setOnboardError(e.message))

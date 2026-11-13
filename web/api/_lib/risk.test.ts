@@ -50,7 +50,7 @@ test("proof type: digital is MEDIUM, no receipt is always HIGH even when unreada
   assert.equal(riskFloor({ ...ok, proofType: "digital" }).risk, 1);
   const none = riskFloor({ ...ok, proofType: "none", readable: false });
   assert.equal(none.risk, 2);
-  assert.deepEqual(none.reasons, ["Walang resibo — kailangan ng adviser"]); // not also "Hindi mabasa"
+  assert.deepEqual(none.reasons, ["No receipt — the adviser must approve"]); // not also "Receipt is unreadable"
   assert.equal(riskFloor({ ...ok, proofType: "none", amount: null }).risk, 2);
 });
 

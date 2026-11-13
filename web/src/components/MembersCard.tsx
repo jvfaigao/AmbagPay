@@ -39,7 +39,7 @@ export default function MembersCard({ collectionId, canUpload }: { collectionId:
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw Object.assign(new Error(data.error ?? `HTTP ${res.status}`), { errors: data.errors as string[] | undefined });
-      setUploadMsg({ ok: true, text: `Na-save ang ${data.saved} students.`, errors: data.errors });
+      setUploadMsg({ ok: true, text: `Saved ${data.saved} students.`, errors: data.errors });
       await roster.refetch();
     } catch (e) {
       setUploadMsg({ ok: false, text: e instanceof Error ? e.message : String(e), errors: (e as { errors?: string[] }).errors });
@@ -92,7 +92,7 @@ export default function MembersCard({ collectionId, canUpload }: { collectionId:
             }}
             className="text-sm file:mr-3 file:rounded-[10px] file:border-0 file:bg-[#ECE8DC] file:px-3 file:py-2 file:font-semibold"
           />
-          <span className="text-xs text-muted">Papalitan nito ang dating listahan. Itutugma ang gmail sa Google login ng student.</span>
+          <span className="text-xs text-muted">This replaces the current list. Each Gmail is matched to the student's Google login.</span>
         </label>
       )}
       {uploading && <p className="text-xs text-muted">Uploading…</p>}
@@ -104,7 +104,7 @@ export default function MembersCard({ collectionId, canUpload }: { collectionId:
               {uploadMsg.errors.slice(0, 5).map((err) => (
                 <li key={err}>{err}</li>
               ))}
-              {uploadMsg.errors.length > 5 && <li>…at {uploadMsg.errors.length - 5} pa</li>}
+              {uploadMsg.errors.length > 5 && <li>…and {uploadMsg.errors.length - 5} more</li>}
             </ul>
           )}
         </div>
@@ -113,9 +113,9 @@ export default function MembersCard({ collectionId, canUpload }: { collectionId:
       {roster.isLoading ? (
         <p className="text-sm text-muted">Loading list…</p>
       ) : roster.error ? (
-        <ErrorCard title="Hindi ma-load ang listahan" message={roster.error.message} />
+        <ErrorCard title="Could not load the class list" message={roster.error.message} />
       ) : students.length === 0 ? (
-        <p className="text-sm text-muted">Wala pang listahan. {canUpload ? "Mag-upload ng CSV sa itaas." : "Ang treasurer ang mag-a-upload."}</p>
+        <p className="text-sm text-muted">No class list yet. {canUpload ? "Upload a CSV above." : "The treasurer uploads it."}</p>
       ) : (
         <>
           <div className="flex items-center gap-2 text-sm">
@@ -153,7 +153,7 @@ export default function MembersCard({ collectionId, canUpload }: { collectionId:
           </div>
 
           <ul className="flex max-h-96 flex-col overflow-y-auto">
-            {shown.length === 0 && <li className="py-3 text-sm text-muted">{tab === "paid" ? "Wala pang nagbayad." : "Bayad na lahat. 🎉"}</li>}
+            {shown.length === 0 && <li className="py-3 text-sm text-muted">{tab === "paid" ? "Nobody has paid yet." : "Everyone has paid. 🎉"}</li>}
             {shown.map((s) => (
               <li key={s.email} className="flex items-center justify-between gap-3 border-b border-line py-2 text-sm last:border-b-0">
                 <span className="flex min-w-0 flex-col">
@@ -172,8 +172,8 @@ export default function MembersCard({ collectionId, canUpload }: { collectionId:
                     <button
                       aria-label={`Remove ${s.name} from the list`}
                       onClick={() => {
-                        const warn = s.paid ? " Nagbayad na siya; lalabas siya sa 'wala sa listahan'." : "";
-                        if (confirm(`Tanggalin si ${s.name} sa listahan?${warn}`)) onDelete(s.email);
+                        const warn = s.paid ? " They already paid; they will show under 'Paid but not on the list'." : "";
+                        if (confirm(`Remove ${s.name} from the list?${warn}`)) onDelete(s.email);
                       }}
                       className="rounded-md px-2 py-1 text-muted hover:bg-riskbg hover:text-risk focus-visible:outline-2 focus-visible:outline-green"
                     >
@@ -188,7 +188,7 @@ export default function MembersCard({ collectionId, canUpload }: { collectionId:
           {canUpload && (
             <button
               onClick={() => {
-                if (confirm(`I-delete ang buong listahan (${students.length} students)? Hindi nito binabago ang mga bayad sa chain.`)) onDelete();
+                if (confirm(`Delete the whole list (${students.length} students)? Payments on-chain are not changed.`)) onDelete();
               }}
               className="self-start rounded-[10px] border border-line px-3 py-1.5 text-xs font-semibold text-risk focus-visible:outline-2 focus-visible:outline-green"
             >
@@ -198,8 +198,8 @@ export default function MembersCard({ collectionId, canUpload }: { collectionId:
 
           {!!roster.data?.notOnRoster.length && (
             <div className="rounded-xl border border-line p-3 text-xs">
-              <p className="font-semibold text-dark">Nagbayad pero wala sa listahan ({roster.data.notOnRoster.length})</p>
-              <p className="text-muted">Baka ibang Gmail ang ginamit. I-check at itugma nang manual.</p>
+              <p className="font-semibold text-dark">Paid but not on the list ({roster.data.notOnRoster.length})</p>
+              <p className="text-muted">They may have used a different Gmail. Check and match them manually.</p>
               <ul className="mt-1">
                 {roster.data.notOnRoster.map((m) => (
                   <li key={m.email}>

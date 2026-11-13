@@ -37,7 +37,7 @@ export function parseCsv(text: string): string[][] {
 
 export function parseRoster(text: string): { students: Student[]; errors: string[] } {
   const [header, ...lines] = parseCsv(text);
-  if (!header) return { students: [], errors: ["Walang laman ang file."] };
+  if (!header) return { students: [], errors: ["The file is empty."] };
   const names = header.map((h) => h.trim().toLowerCase());
   const col = {} as Record<keyof Student, number>;
   const missing: string[] = [];
@@ -45,8 +45,8 @@ export function parseRoster(text: string): { students: Student[]; errors: string
     col[key] = names.findIndex((n) => COLUMNS[key].includes(n));
     if (col[key] < 0) missing.push(COLUMNS[key][0]);
   }
-  if (missing.length) return { students: [], errors: [`Kulang na column: ${missing.join(", ")}. Kailangan: student id, fullname, section, gmail.`] };
-  if (lines.length > MAX_ROWS) return { students: [], errors: [`Sobrang dami: hanggang ${MAX_ROWS} students lang.`] };
+  if (missing.length) return { students: [], errors: [`Missing column: ${missing.join(", ")}. Required: student id, fullname, section, gmail.`] };
+  if (lines.length > MAX_ROWS) return { students: [], errors: [`Too many rows: up to ${MAX_ROWS} students only.`] };
 
   const students: Student[] = [];
   const errors: string[] = [];
@@ -55,9 +55,9 @@ export function parseRoster(text: string): { students: Student[]; errors: string
     const line = i + 2; // 1-based, after the header
     const get = (k: keyof Student) => (cells[col[k]] ?? "").trim();
     const s = { studentId: get("studentId"), name: get("name"), section: get("section"), email: get("email").toLowerCase() };
-    if (!s.name) return void errors.push(`Row ${line}: walang fullname.`);
-    if (!EMAIL.test(s.email)) return void errors.push(`Row ${line}: hindi valid ang gmail (${s.email || "blank"}).`);
-    if (seen.has(s.email)) return void errors.push(`Row ${line}: doble ang gmail ${s.email}.`);
+    if (!s.name) return void errors.push(`Row ${line}: missing fullname.`);
+    if (!EMAIL.test(s.email)) return void errors.push(`Row ${line}: invalid gmail (${s.email || "blank"}).`);
+    if (seen.has(s.email)) return void errors.push(`Row ${line}: duplicate gmail ${s.email}.`);
     seen.add(s.email);
     students.push(s);
   });

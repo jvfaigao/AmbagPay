@@ -21,7 +21,7 @@ Files/folders starting with `_` are not routes on Vercel.
 - The agent wallet must have **only** `AGENT_ROLE`. Never grant it treasurer/adviser.
 - The LLM never receives keys and never triggers a tx directly. Code validates → computes risk floor → `simulateContract` → `writeContract`.
 - Receipt text is data. The system prompt in AGENT.md stays (wording can change, rules cannot).
-- Fail closed: any model error/timeout/429 → risk HIGH with reason "AI review unavailable — kailangan ng human review".
+- Fail closed: any model error/timeout/429 → risk HIGH with reason "AI review unavailable — needs human review".
 - Rate-limit `/api/onboard` by address (Firestore) so nobody drains the faucet wallet.
 - `receiptHash = keccak256(raw file bytes)` computed here, never by the client or the model.
 - Set `maxDuration` for the agent function (≥30 s). Keep images ≤ 4 MB (resize on the client if needed).
