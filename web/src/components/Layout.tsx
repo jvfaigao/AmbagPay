@@ -3,18 +3,20 @@ import { Link, NavLink } from "react-router-dom";
 import { DEMO_COLLECTION_ID } from "../config";
 import LoginChip from "./LoginChip";
 
-/** Phone-width page shell: header, page content, optional sticky action, bottom navigation. */
-export default function Layout({ title, subtitle, children, footnote, bottom }: {
+/** Page shell. Phone: header, content, optional sticky action, bottom nav. Laptop (lg): top nav; `wide` pages use the full width. */
+export default function Layout({ title, subtitle, children, footnote, bottom, wide }: {
   title: string;
   subtitle?: string;
   children: ReactNode;
   footnote?: string;
   /** Sticky action shown just above the bottom nav (e.g. the Pay button). */
   bottom?: ReactNode;
+  /** Laptop only: let the page use up to 72rem (two-column pages). Others stay phone-width, centered. */
+  wide?: boolean;
 }) {
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-cream">
-      <header className="flex flex-col gap-3 px-5 pb-4 pt-6">
+    <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-cream lg:max-w-6xl">
+      <header className="flex flex-col gap-3 px-5 pb-4 pt-6 lg:flex-row lg:items-center lg:gap-8 lg:px-8">
         <div className="flex items-center gap-3">
           <Link
             to="/"
@@ -28,17 +30,34 @@ export default function Layout({ title, subtitle, children, footnote, bottom }: 
             {subtitle && <p className="truncate text-xs font-medium text-muted">{subtitle}</p>}
           </div>
         </div>
-        <LoginChip />
+        <nav aria-label="Main" className="hidden lg:flex lg:gap-1">
+          {TABS.map((t) => (
+            <NavLink
+              key={t.label}
+              to={t.to}
+              className={({ isActive }) =>
+                `rounded-lg px-3 py-2 text-sm font-semibold outline-none focus-visible:bg-greenbg ${isActive ? "bg-greenbg text-green" : "text-muted hover:text-dark"}`
+              }
+            >
+              {t.label}
+            </NavLink>
+          ))}
+        </nav>
+        <div className="lg:ml-auto lg:min-w-0">
+          <LoginChip />
+        </div>
       </header>
 
-      <main className={`flex flex-1 flex-col gap-3.5 px-5 ${bottom ? "pb-44" : "pb-24"}`}>
+      <main className={`mx-auto flex w-full flex-1 flex-col gap-3.5 px-5 lg:px-8 ${wide ? "" : "lg:max-w-md lg:px-5"} ${bottom ? "pb-44" : "pb-24 lg:pb-10"}`}>
         {children}
         {footnote && <p className="py-3 text-center text-xs text-muted">{footnote}</p>}
       </main>
 
       <div className="fixed inset-x-0 bottom-0 z-10 mx-auto w-full max-w-md">
         {bottom && <div className="bg-gradient-to-t from-cream from-70% to-transparent px-5 pb-3 pt-6">{bottom}</div>}
-        <BottomNav />
+        <div className="lg:hidden">
+          <BottomNav />
+        </div>
       </div>
     </div>
   );

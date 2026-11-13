@@ -81,7 +81,11 @@ export default function Ledger() {
       title="Public Ledger"
       subtitle={collection.name}
       footnote="Anyone can view this page · Live from BNB Smart Chain"
+      wide
     >
+      {/* Laptop/projector: summary on the left (sticky), expenses on the right. Phone: one column. */}
+      <div className="grid items-start gap-3.5 lg:grid-cols-[5fr_7fr] lg:gap-6">
+      <div className="flex flex-col gap-3.5 lg:sticky lg:top-6">
       <div className="flex gap-2">
         <Stat label="Collected" value={pesoShort(collection.totalCollected)} />
         <Stat label="Spent" value={pesoShort(collection.totalSpent)} />
@@ -111,8 +115,9 @@ export default function Ledger() {
           </div>
         ))}
       </Card>
+      </div>
 
-      <Card className="px-4 py-3">
+      <Card className="px-4 py-3 lg:px-6 lg:py-5">
         <Eyebrow>Expenses</Eyebrow>
         {expenses.length === 0 ? (
           <p className="py-4 text-sm text-muted">Wala pang gastos sa collection na ito. Bawat gastos ay lalabas dito kasama ang resibo at approvals.</p>
@@ -150,6 +155,7 @@ export default function Ledger() {
           })
         )}
       </Card>
+      </div>
     </Layout>
   );
 }
@@ -158,7 +164,7 @@ function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex-1 rounded-[14px] border border-line bg-paper p-3">
       <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">{label}</p>
-      <p className="font-display text-lg font-bold text-dark">{value}</p>
+      <p className="font-display text-lg font-bold text-dark lg:text-3xl">{value}</p>
     </div>
   );
 }

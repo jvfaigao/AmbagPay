@@ -76,20 +76,29 @@ export default function Officer() {
   } else {
     body = (
       <>
-        <p className="text-sm">
+        <p className="text-sm lg:text-base">
           Signed in as <span className="font-semibold text-dark">{isAdviser ? "Adviser" : "Treasurer"}</span>
           {isAdviser ? ": you give the second approval on big or HIGH-risk expenses." : ": upload receipts and give the first approval."}
         </p>
         {onboarding && <p className="text-xs text-muted">Setting up your wallet…</p>}
         {onboardError && <p className="text-xs text-risk">{onboardError}</p>}
-        {isTreasurer && !isAdviser && <ReviewPanel address={address} categories={categories} />}
-        <PendingList count={expenseCount} categories={categories} isTreasurer={isTreasurer} isAdviser={isAdviser} />
+        {/* Laptop: upload + agent result on the left, approvals on the right. Adviser has one column. */}
+        <div className={`grid items-start gap-3.5 lg:gap-6 ${isTreasurer && !isAdviser ? "lg:grid-cols-2" : "lg:max-w-2xl"}`}>
+          {isTreasurer && !isAdviser && (
+            <div className="flex flex-col gap-3.5">
+              <ReviewPanel address={address} categories={categories} />
+            </div>
+          )}
+          <div className="flex flex-col gap-3.5">
+            <PendingList count={expenseCount} categories={categories} isTreasurer={isTreasurer} isAdviser={isAdviser} />
+          </div>
+        </div>
       </>
     );
   }
 
   return (
-    <Layout title="Officer" subtitle={ORG_NAME} footnote="The agent can only propose. The contract decides.">
+    <Layout title="Officer" subtitle={ORG_NAME} footnote="The agent can only propose. The contract decides." wide={authenticated && (isTreasurer || isAdviser)}>
       {body}
     </Layout>
   );
