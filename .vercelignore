@@ -1,0 +1,7 @@
+# Vercel CLI deploys run from the repo root (Root Directory = web). Never upload secrets or the contracts project.
+contracts/
+**/.env
+**/.env.*
+!**/.env.example
+**/node_modules
+docs/
