@@ -13,15 +13,15 @@ export type CollectionSummary = {
 };
 
 /** Every collection (fee) on the vault, plus whether `member` paid each one when given. */
-export function useCollections(member?: `0x${string}`) {
-  const count = useReadContract({ ...vault, functionName: "collectionCount" });
+export function useCollections(member?: `0x${string}`, refetchInterval?: number) {
+  const count = useReadContract({ ...vault, functionName: "collectionCount", query: { refetchInterval } });
   const ids = Array.from({ length: Number(count.data ?? 0n) }, (_, i) => BigInt(i));
   const rows = useReadContracts({
     contracts: ids.flatMap((id) => [
       { ...vault, functionName: "getCollection" as const, args: [id] as const },
       { ...vault, functionName: "hasPaid" as const, args: [id, member ?? "0x0000000000000000000000000000000000000000"] as const },
     ]),
-    query: { enabled: ids.length > 0 },
+    query: { enabled: ids.length > 0, refetchInterval },
   });
 
   const collections: CollectionSummary[] = ids.flatMap((id, i) => {
