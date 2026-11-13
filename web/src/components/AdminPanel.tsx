@@ -11,7 +11,7 @@ import { useCollections } from "../lib/useCollections";
 
 const MAX_CATEGORIES = 20; // AmbagVault.MAX_CATEGORIES
 const PESOS = /^\d+(\.\d{1,2})?$/;
-const input = "rounded-[10px] border border-line bg-white px-3 py-2";
+const input = "input";
 
 /** President (ADMIN_ROLE) tools: create a new fee, close a fee so members can claim the leftover. */
 export default function AdminPanel({ address }: { address: `0x${string}` }) {
@@ -102,7 +102,7 @@ export default function AdminPanel({ address }: { address: `0x${string}` }) {
                 <button
                   onClick={() => onClose(c.id, c.name)}
                   disabled={!!busy}
-                  className="shrink-0 rounded-[10px] border border-risk px-3 py-1.5 text-xs font-semibold text-risk focus-visible:outline-2 focus-visible:outline-risk disabled:opacity-50"
+                  className="shrink-0 rounded-xl bg-riskbg px-3 py-1.5 text-xs font-semibold text-risk focus-visible:outline-2 focus-visible:outline-risk disabled:opacity-50"
                 >
                   {busy === c.id.toString() ? "Closing…" : "Close + refund"}
                 </button>
@@ -171,7 +171,7 @@ export default function AdminPanel({ address }: { address: `0x${string}` }) {
           <button
             onClick={onCreate}
             disabled={!formOk || !!busy}
-            className="h-12 rounded-[14px] bg-gold text-base font-bold text-dark focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-dark disabled:opacity-50"
+            className="h-12 rounded-2xl bg-gold text-base font-bold text-dark focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-dark disabled:opacity-50"
           >
             {busy === "create" ? "Creating on BNB Smart Chain…" : "Create fee"}
           </button>

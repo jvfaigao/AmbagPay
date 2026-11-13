@@ -9,7 +9,7 @@ export default function App() {
   if (!isConfigured) {
     return (
       <div className="mx-auto max-w-md p-6">
-        <div className="rounded-2xl border border-line bg-paper p-5 text-sm">
+        <div className="rounded-[20px] bg-paper p-5 text-sm shadow-card">
           <p className="font-semibold text-dark">App not configured</p>
           <p className="mt-2">
             Copy <code>.env.example</code> to <code>.env.local</code>, fill in <code>VITE_VAULT_ADDRESS</code>,{" "}

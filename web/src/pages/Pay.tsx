@@ -182,7 +182,7 @@ export default function Pay() {
       </Card>
 
       {authenticated && paid ? (
-        <Card className="flex flex-col items-start gap-2 border-green p-5">
+        <Card className="flex flex-col items-start gap-2 bg-greenbg p-5 shadow-none">
           <Chip tone="green">Paid ✓</Chip>
           <p className="text-sm text-dark">Thank you! Your payment is recorded on BNB Smart Chain.</p>
           {closed && (
@@ -224,7 +224,7 @@ function PrimaryButton({ children, onClick, disabled }: { children: React.ReactN
     <button
       onClick={onClick}
       disabled={disabled}
-      className="h-14 w-full rounded-[14px] bg-gold text-base font-bold text-dark shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-dark disabled:opacity-50"
+      className="h-14 w-full rounded-2xl bg-gold text-base font-bold text-dark shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-dark disabled:opacity-50"
     >
       {children}
     </button>
