@@ -1,6 +1,7 @@
 // /api/roster — class list per collection, officers only (personal data: names, student ids, emails).
 //   POST { collectionId, csv }  (treasurer)          → save the list
-//   GET  ?collectionId=N        (treasurer/adviser)  → every student + paid/not yet, matched by Google email → wallet → hasPaid
+//   DELETE { collectionId, email? } (treasurer)        → remove one student, or the whole list when no email
+//   GET  ?collectionId=N       (treasurer/adviser)  → every student + paid/not yet, matched by Google email → wallet → hasPaid
 import { keccak256, toBytes } from "viem";
 import { ambagVaultAbi } from "../src/abi/AmbagVault.js";
 import { callerWallet } from "./_lib/auth.js";
@@ -39,7 +40,28 @@ export default {
         return json({ saved: students.length, errors });
       }
 
-      if (request.method !== "GET") return json({ error: "GET or POST only" }, 405);
+      if (request.method === "DELETE") {
+        if (!isTreasurer) return json({ error: "Treasurer lang ang puwedeng mag-delete ng listahan." }, 403);
+        const body = (await request.json().catch(() => null)) as { collectionId?: number; email?: string } | null;
+        if (!Number.isInteger(body?.collectionId) || body!.collectionId! < 0) return json({ error: "Invalid collectionId" }, 400);
+        const ref = rosters().doc(String(body!.collectionId));
+
+        // No email = delete the whole list. Payments on-chain are not touched.
+        if (body!.email === undefined) {
+          await ref.delete();
+          return json({ deleted: "all" });
+        }
+        const email = String(body!.email).trim().toLowerCase();
+        const doc = await ref.get();
+        const students = (doc.data()?.students ?? []) as Student[];
+        const left = students.filter((s) => s.email !== email);
+        if (left.length === students.length) return json({ error: "Wala sa listahan ang student na iyon." }, 404);
+        // shortcut: read-then-write, two treasurers deleting at the same moment could undo one; fine for a small org.
+        await ref.set({ ...doc.data(), students: left });
+        return json({ deleted: email, remaining: left.length });
+      }
+
+      if (request.method !== "GET") return json({ error: "GET, POST or DELETE only" }, 405);
       if (!isTreasurer && !isAdviser) return json({ error: "Officers lang ang puwedeng makakita ng listahan." }, 403);
       const idParam = new URL(request.url).searchParams.get("collectionId") ?? "";
       if (!/^\d+$/.test(idParam)) return json({ error: "Invalid collectionId" }, 400);

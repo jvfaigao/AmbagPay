@@ -48,6 +48,23 @@ export default function MembersCard({ collectionId, canUpload }: { collectionId:
     }
   }
 
+  // No email = delete the whole list.
+  async function onDelete(email?: string) {
+    setUploadMsg(undefined);
+    try {
+      const res = await fetch("/api/roster", {
+        method: "DELETE",
+        headers: { "content-type": "application/json", authorization: `Bearer ${await getAccessToken()}` },
+        body: JSON.stringify({ collectionId: Number(collectionId), email }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
+      await roster.refetch();
+    } catch (e) {
+      setUploadMsg({ ok: false, text: e instanceof Error ? e.message : String(e) });
+    }
+  }
+
   const students = roster.data?.students ?? [];
   const sections = useMemo(() => [...new Set(students.map((s) => s.section).filter(Boolean))].sort(), [students]);
   const inSection = section ? students.filter((s) => s.section === section) : students;
@@ -145,14 +162,39 @@ export default function MembersCard({ collectionId, canUpload }: { collectionId:
                     {s.studentId} · {s.section} · {s.email}
                   </span>
                 </span>
-                {s.paid ? (
-                  <Chip tone="green">✓ Paid</Chip>
-                ) : (
-                  <Chip tone="neutral">{s.loggedIn ? "Logged in, not paid" : "Not yet"}</Chip>
-                )}
+                <span className="flex shrink-0 items-center gap-2">
+                  {s.paid ? (
+                    <Chip tone="green">✓ Paid</Chip>
+                  ) : (
+                    <Chip tone="neutral">{s.loggedIn ? "Logged in, not paid" : "Not yet"}</Chip>
+                  )}
+                  {canUpload && (
+                    <button
+                      aria-label={`Remove ${s.name} from the list`}
+                      onClick={() => {
+                        const warn = s.paid ? " Nagbayad na siya; lalabas siya sa 'wala sa listahan'." : "";
+                        if (confirm(`Tanggalin si ${s.name} sa listahan?${warn}`)) onDelete(s.email);
+                      }}
+                      className="rounded-md px-2 py-1 text-muted hover:bg-riskbg hover:text-risk focus-visible:outline-2 focus-visible:outline-green"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </span>
               </li>
             ))}
           </ul>
+
+          {canUpload && (
+            <button
+              onClick={() => {
+                if (confirm(`I-delete ang buong listahan (${students.length} students)? Hindi nito binabago ang mga bayad sa chain.`)) onDelete();
+              }}
+              className="self-start rounded-[10px] border border-line px-3 py-1.5 text-xs font-semibold text-risk focus-visible:outline-2 focus-visible:outline-green"
+            >
+              Delete whole list
+            </button>
+          )}
 
           {!!roster.data?.notOnRoster.length && (
             <div className="rounded-xl border border-line p-3 text-xs">
