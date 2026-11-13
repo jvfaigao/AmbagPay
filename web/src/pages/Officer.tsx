@@ -10,12 +10,12 @@ import { EXPENSE_STATUS, RISK_LABEL, vault } from "../lib/contracts";
 import { friendlyError } from "../lib/errors";
 import { shrinkImage } from "../lib/image";
 import { peso, shortAddress } from "../lib/format";
+import { useCollections } from "../lib/useCollections";
 import { useOnboarding } from "../lib/useOnboarding";
 
 const REFRESH_MS = 4000;
 const TREASURER_ROLE = keccak256(toBytes("TREASURER_ROLE"));
 const ADVISER_ROLE = keccak256(toBytes("ADVISER_ROLE"));
-const collectionId = BigInt(DEMO_COLLECTION_ID);
 
 type Category = { name: string; cap: bigint; spent: bigint };
 
@@ -23,6 +23,8 @@ export default function Officer() {
   const { ready, authenticated, login } = usePrivy();
   const { address } = useAccount();
   const { onboarding, onboardError } = useOnboarding(address, null, () => undefined);
+  const [collectionId, setCollectionId] = useState(BigInt(DEMO_COLLECTION_ID));
+  const { collections } = useCollections();
 
   const roles = useReadContracts({
     contracts: [
@@ -83,15 +85,32 @@ export default function Officer() {
         </p>
         {onboarding && <p className="text-xs text-muted">Setting up your wallet…</p>}
         {onboardError && <p className="text-xs text-risk">{onboardError}</p>}
+        {collections.length > 1 && (
+          <label className="flex flex-col gap-1 text-sm lg:max-w-md">
+            <span className="font-semibold text-dark">Fee / contribution</span>
+            <select
+              value={collectionId.toString()}
+              onChange={(e) => setCollectionId(BigInt(e.target.value))}
+              className="rounded-[10px] border border-line bg-white px-3 py-2"
+            >
+              {collections.map((c) => (
+                <option key={c.id.toString()} value={c.id.toString()}>
+                  {c.name} · {peso(c.amountPerMember)}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         {/* Laptop: upload + agent result on the left, approvals on the right. Adviser has one column. */}
         <div className={`grid items-start gap-3.5 lg:gap-6 ${isTreasurer && !isAdviser ? "lg:grid-cols-2" : "lg:max-w-2xl"}`}>
           {isTreasurer && !isAdviser && (
             <div className="flex flex-col gap-3.5">
-              <ReviewPanel address={address} categories={categories} />
+              {/* key: a new fee starts with a clean form (its categories differ) */}
+              <ReviewPanel key={collectionId.toString()} collectionId={collectionId} address={address} categories={categories} />
             </div>
           )}
           <div className="flex flex-col gap-3.5">
-            <PendingList count={expenseCount} categories={categories} isTreasurer={isTreasurer} isAdviser={isAdviser} />
+            <PendingList collectionId={collectionId} count={expenseCount} categories={categories} isTreasurer={isTreasurer} isAdviser={isAdviser} />
             <MembersCard collectionId={collectionId} canUpload={isTreasurer} />
           </div>
         </div>
@@ -123,7 +142,7 @@ type Review = {
 
 const LOADING_STEPS = ["Reading receipt…", "Checking duplicates…", "Checking budget…", "Comparing with past expenses…", "Deciding risk…"];
 
-function ReviewPanel({ address, categories }: { address: `0x${string}`; categories: readonly Category[] }) {
+function ReviewPanel({ collectionId, address, categories }: { collectionId: bigint; address: `0x${string}`; categories: readonly Category[] }) {
   const [image, setImage] = useState<{ base64: string; mimeType: string; previewUrl: string }>();
   const [payee, setPayee] = useState<string>(address);
   const [categoryIndex, setCategoryIndex] = useState<number | null>(null); // null = let the AI choose
@@ -386,7 +405,19 @@ function RiskBadge({ risk }: { risk: string }) {
 
 // ───────────────────────── Pending expenses: approve / reject / execute ─────────────────────────
 
-function PendingList({ count, categories, isTreasurer, isAdviser }: { count: number; categories: readonly Category[]; isTreasurer: boolean; isAdviser: boolean }) {
+function PendingList({
+  collectionId,
+  count,
+  categories,
+  isTreasurer,
+  isAdviser,
+}: {
+  collectionId: bigint;
+  count: number;
+  categories: readonly Category[];
+  isTreasurer: boolean;
+  isAdviser: boolean;
+}) {
   const publicClient = usePublicClient({ chainId: CHAIN_ID });
   const { writeContractAsync } = useWriteContract();
   const [busyId, setBusyId] = useState<number>();

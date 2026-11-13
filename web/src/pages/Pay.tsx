@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { usePrivy } from "@privy-io/react-auth";
 import { useAccount, usePublicClient, useReadContracts, useWriteContract } from "wagmi";
+import FeeList from "../components/FeeList";
 import Layout from "../components/Layout";
 import { Card, Chip, ErrorCard, Eyebrow, ExplorerLink, LoadingCard, ProgressBar, Row } from "../components/ui";
 import { CHAIN_ID, EXPECTED_MEMBERS, ORG_NAME, VAULT_ADDRESS } from "../config";
@@ -173,6 +174,7 @@ export default function Pay() {
         <p className="px-1 text-sm text-muted">Mag-sign in gamit ang Google. Gagawan ka ng wallet at bibigyan ng test pesos; walang gas fee.</p>
       )}
       {error && <ErrorCard title="Hindi natuloy ang bayad" message={error} />}
+      <FeeList currentId={collectionId} member={address} />
     </Layout>
   );
 }

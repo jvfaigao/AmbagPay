@@ -75,6 +75,8 @@ cd contracts && npm install
 npx hardhat test
 npx hardhat run scripts/deploy.js --network bscTestnet
 npx hardhat run scripts/grant-role.js --network bscTestnet
+# new fee (admin only): env NAME, AMOUNT, CATEGORIES="Shirts:5000,Printing:500", DEADLINE=YYYY-MM-DD (optional)
+npx hardhat run scripts/create-collection.js --network bscTestnet
 
 # web (after scaffold)
 cd web && npm install
