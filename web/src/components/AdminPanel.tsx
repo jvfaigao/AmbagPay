@@ -81,7 +81,7 @@ export default function AdminPanel({ address }: { address: `0x${string}` }) {
 
   return (
     <Card className="flex flex-col gap-3 p-5">
-      <Eyebrow>Admin · Fees</Eyebrow>
+      <Eyebrow>All fees</Eyebrow>
 
       <ul className="flex flex-col">
         {collections.map((c) => {

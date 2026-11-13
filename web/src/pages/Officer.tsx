@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { usePrivy } from "@privy-io/react-auth";
+import { Link } from "react-router-dom";
 import { useAccount, usePublicClient, useReadContracts, useWriteContract } from "wagmi";
 import Layout from "../components/Layout";
-import AdminPanel from "../components/AdminPanel";
 import MembersCard from "../components/MembersCard";
 import { Card, Chip, ErrorCard, ExpenseSteps, Eyebrow, ExplorerLink, LoadingCard } from "../components/ui";
 import { CHAIN_ID, DEMO_COLLECTION_ID, ORG_NAME } from "../config";
@@ -73,7 +73,7 @@ export default function Officer() {
       <>
         <p className="text-sm lg:text-base">
           Signed in as <span className="font-semibold text-dark">{isAdviser ? "Adviser" : isTreasurer ? "Treasurer" : "Admin"}{isAdmin && (isAdviser || isTreasurer) ? " + Admin" : ""}</span>
-          {isAdviser ? ": you give the second approval on big or HIGH-risk expenses." : isTreasurer ? ": upload receipts and give the first approval." : ": create and close fees."}
+          {isAdviser ? ": you give the second approval on big or HIGH-risk expenses." : isTreasurer ? ": upload receipts and give the first approval." : ": assign officers and manage fees on the Admin page."}
         </p>
         {onboarding && <p className="text-xs text-muted">Setting up your wallet…</p>}
         {onboardError && <p className="text-xs text-risk">{onboardError}</p>}
@@ -104,7 +104,15 @@ export default function Officer() {
           <div className="flex flex-col gap-3.5">
             <PendingList collectionId={collectionId} count={expenseCount} categories={categories} isTreasurer={isTreasurer} isAdviser={isAdviser} />
             <MembersCard collectionId={collectionId} canUpload={isTreasurer} />
-            {isAdmin && <AdminPanel address={address} />}
+            {isAdmin && (
+              <Card className="flex flex-col items-start gap-1 text-sm">
+                <Eyebrow>Admin</Eyebrow>
+                <p>Officers, fees and categories are on the Admin page.</p>
+                <Link to="/admin" className="font-semibold text-green underline-offset-2 hover:underline">
+                  Open Admin ›
+                </Link>
+              </Card>
+            )}
           </div>
         </div>
       </>

@@ -5,6 +5,7 @@ import Pay from "./pages/Pay";
 import Officer from "./pages/Officer";
 import Payments from "./pages/Payments";
 import Records from "./pages/Records";
+import Admin from "./pages/Admin";
 import { isConfigured } from "./config";
 
 export default function App() {
@@ -30,6 +31,7 @@ export default function App() {
       <Route path="/officer" element={<Officer />} />
       <Route path="/payments" element={<Payments />} />
       <Route path="/records" element={<Records />} />
+      <Route path="/admin" element={<Admin />} />
       <Route path="*" element={<Home />} />
     </Routes>
   );

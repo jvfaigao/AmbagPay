@@ -18,6 +18,7 @@ const CONTRACT_ERRORS: Record<string, string> = {
   ExpenseNotFound: "This expense does not exist.",
   InvalidCategory: "That category does not exist in this collection.",
   InvalidInput: "Something is missing or wrong in the form (name, amount or categories).",
+  AccessControlUnauthorizedAccount: "Your wallet does not have the role needed for this.",
 };
 
 export function friendlyError(e: unknown): string {
