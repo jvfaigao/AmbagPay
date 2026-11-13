@@ -36,6 +36,7 @@ export default function Pay() {
       { ...vault, functionName: "hasPaid", args: [collectionId, address!] },
       { ...token, functionName: "balanceOf", args: [address!] },
       { ...vault, functionName: "hasClaimed", args: [collectionId, address!] },
+      { ...token, functionName: "allowance", args: [address!, VAULT_ADDRESS] },
     ],
     query: { enabled: !!address, refetchInterval: REFRESH_MS },
   });
@@ -45,6 +46,7 @@ export default function Pay() {
   const hasPaid = mine.data?.[0]?.result;
   const balance = mine.data?.[1]?.result;
   const hasClaimed = mine.data?.[2]?.result;
+  const allowance = mine.data?.[3]?.result;
 
   const { onboarding, onboardError } = useOnboarding(address, balance, mine.refetch);
 
@@ -61,9 +63,12 @@ export default function Pay() {
     if (!collection || !publicClient) return;
     setError(undefined);
     try {
-      setStep("approving");
-      const approveHash = await writeContractAsync({ ...token, functionName: "approve", args: [VAULT_ADDRESS, collection.amountPerMember] });
-      await confirmed(approveHash);
+      // A retry after a failed pay already has the allowance: skip straight to step 2.
+      if (allowance === undefined || allowance < collection.amountPerMember) {
+        setStep("approving");
+        const approveHash = await writeContractAsync({ ...token, functionName: "approve", args: [VAULT_ADDRESS, collection.amountPerMember] });
+        await confirmed(approveHash);
+      }
 
       setStep("paying");
       const payHash = await writeContractAsync({ ...vault, functionName: "pay", args: [collectionId] });
@@ -103,7 +108,7 @@ export default function Pay() {
   if (!collection || !categories) {
     return (
       <Layout title="AmbagPay" subtitle={ORG_NAME}>
-        <ErrorCard message={base.error?.message ?? base.data?.[0]?.error?.message ?? "Collection not found."} />
+        <ErrorCard message={friendlyError(base.error ?? base.data?.[0]?.error ?? new Error("Collection not found."))} />
       </Layout>
     );
   }

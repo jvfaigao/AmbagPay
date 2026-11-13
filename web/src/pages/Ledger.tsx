@@ -5,6 +5,7 @@ import Layout from "../components/Layout";
 import { Card, Chip, ErrorCard, ExpenseSteps, Eyebrow, ExplorerLink, LoadingCard, ProgressBar, Row } from "../components/ui";
 import { EXPECTED_MEMBERS, ORG_NAME, VAULT_ADDRESS } from "../config";
 import { COLLECTION_STATUS, RISK_LABEL, vault } from "../lib/contracts";
+import { friendlyError } from "../lib/errors";
 import { formatDate, percent, peso, pesoShort, shortAddress } from "../lib/format";
 
 const REFRESH_MS = 4000;
@@ -64,11 +65,11 @@ export default function Ledger() {
     );
   }
 
-  const failure = base.error?.message ?? base.data?.[0]?.error?.message;
+  const failure = base.error ?? base.data?.[0]?.error;
   if (!collection || !categories) {
     return (
       <Layout title="Public Ledger" subtitle={ORG_NAME}>
-        <ErrorCard message={failure ?? "Collection not found."} />
+        <ErrorCard message={failure ? friendlyError(failure) : "Collection not found."} />
       </Layout>
     );
   }
