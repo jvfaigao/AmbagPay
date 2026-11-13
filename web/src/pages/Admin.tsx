@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 import { usePublicClient, useReadContract, useWriteContract } from "wagmi";
 import AdminPanel from "../components/AdminPanel";
 import Layout from "../components/Layout";
 import { Card, Chip, ErrorCard, Eyebrow, ExplorerLink, LoadingCard, ProgressBar, Row, Tabs } from "../components/ui";
-import { CHAIN_ID, DEMO_COLLECTION_ID, ORG_NAME } from "../config";
-import { vault } from "../lib/contracts";
+import { CHAIN_ID, ORG_NAME } from "../config";
+import { COLLECTION_STATUS, vault } from "../lib/contracts";
 import { friendlyError } from "../lib/errors";
 import { percent, peso, pesoShort, shortAddress } from "../lib/format";
 import { useCollections } from "../lib/useCollections";
@@ -210,38 +211,55 @@ function OfficersTab({ admin }: { admin: `0x${string}` }) {
 // ───────────────────────── Categories (read-only) ─────────────────────────
 
 function CategoriesTab() {
-  const { collections } = useCollections();
-  const [collectionId, setCollectionId] = useState(BigInt(DEMO_COLLECTION_ID));
-  const categories = useReadContract({ ...vault, functionName: "getCategories", args: [collectionId] });
-  const fee = collections.find((c) => c.id === collectionId);
-  const capTotal = categories.data?.reduce((s, c) => s + c.cap, 0n) ?? 0n;
-
+  const { collections, isLoading } = useCollections();
   return (
-    <div className="flex flex-col gap-4 lg:max-w-2xl">
-      <label className="flex flex-col gap-1.5 text-sm">
-        <span className="font-medium text-dark">Fee</span>
-        <select value={collectionId.toString()} onChange={(e) => setCollectionId(BigInt(e.target.value))} className="input">
-          {collections.map((c) => (
-            <option key={c.id.toString()} value={c.id.toString()}>
-              {c.name} · {peso(c.amountPerMember)}
-            </option>
-          ))}
-        </select>
-      </label>
-      <Card className="flex flex-col gap-2.5 p-5">
-        <Eyebrow>{fee?.name ?? "Fee"} · categories</Eyebrow>
-        {categories.isLoading && <p className="text-sm text-muted">Loading…</p>}
-        {categories.data?.map((c) => (
-          <div key={c.name} className="flex flex-col gap-1.5">
-            <Row label={c.name} value={`${pesoShort(c.spent)} spent · ${pesoShort(c.cap)} cap`} />
-            <ProgressBar value={percent(c.spent, c.cap)} />
-          </div>
-        ))}
-        {categories.data && <Row label="Total of all caps" value={pesoShort(capTotal)} />}
-      </Card>
-      <p className="rounded-[14px] bg-goldbg p-3 text-xs text-[#5d4a0a]">
+    <div className="flex flex-col gap-4">
+      <p className="rounded-[14px] bg-goldbg p-3 text-xs text-[#5d4a0a] lg:text-sm">
         Categories and caps are locked in the contract when a fee is created, so nobody can raise a cap later. To use a new category, create a new fee on the Fees tab.
       </p>
+      {isLoading && <LoadingCard />}
+      <div className="grid items-start gap-4 lg:grid-cols-2 lg:gap-6">
+        {collections.map((c) => (
+          <FeeCategories key={c.id.toString()} id={c.id} name={c.name} amount={c.amountPerMember} closed={c.status === COLLECTION_STATUS.Closed} />
+        ))}
+      </div>
     </div>
+  );
+}
+
+function FeeCategories({ id, name, amount, closed }: { id: bigint; name: string; amount: bigint; closed: boolean }) {
+  const categories = useReadContract({ ...vault, functionName: "getCategories", args: [id] });
+  const capTotal = categories.data?.reduce((s, c) => s + c.cap, 0n) ?? 0n;
+  const spentTotal = categories.data?.reduce((s, c) => s + c.spent, 0n) ?? 0n;
+  return (
+    <Card className="flex flex-col gap-3 p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate font-display text-lg font-bold text-dark">{name}</p>
+          <p className="text-xs text-muted">
+            #{id.toString()} · {peso(amount)} per member
+          </p>
+        </div>
+        <Chip tone={closed ? "neutral" : "green"}>{closed ? "Closed" : "Open"}</Chip>
+      </div>
+      {categories.isLoading && <p className="text-sm text-muted">Loading…</p>}
+      {categories.data?.map((c) => (
+        <div key={c.name} className="flex flex-col gap-1.5">
+          <Row label={c.name} value={`${pesoShort(c.spent)} / ${pesoShort(c.cap)}`} />
+          <ProgressBar value={percent(c.spent, c.cap)} />
+        </div>
+      ))}
+      {categories.data && (
+        <div className="flex justify-between gap-3 border-t border-line pt-3 text-sm">
+          <span className="text-muted">Total</span>
+          <span className="font-semibold tabular-nums text-dark">
+            {pesoShort(spentTotal)} spent of {pesoShort(capTotal)}
+          </span>
+        </div>
+      )}
+      <Link to={`/ledger/${id}`} className="self-start text-xs font-semibold text-green underline-offset-2 hover:underline">
+        Open ledger ›
+      </Link>
+    </Card>
   );
 }
