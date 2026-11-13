@@ -1,8 +1,8 @@
 // POST /api/onboard (Authorization: Bearer <Privy access token>) -> gives the caller's wallet a little gas + ₱1,000 tPHP.
 import { parseEther } from "viem";
-import { mockPhpAbi } from "../src/abi/MockPHP";
-import { callerWallet } from "./_lib/auth";
-import { faucetClient, publicClient, TOKEN_ADDRESS } from "./_lib/chain";
+import { mockPhpAbi } from "../src/abi/MockPHP.js";
+import { callerWallet } from "./_lib/auth.js";
+import { faucetClient, publicClient, TOKEN_ADDRESS } from "./_lib/chain.js";
 
 const GAS_DRIP = parseEther("0.001"); // ~70 txs at 0.1 gwei; keeps the faucet alive for ~260 new users
 const MIN_GAS = parseEther("0.0005"); // below this a wallet cannot send a few txs; keep in sync with src/lib/useOnboarding.ts

@@ -94,7 +94,7 @@ Holding crypto for others in the Philippines needs a BSP-licensed VASP, so we sa
 - **Data:** collection 0 "Org Fee · 1st Sem", ₱150, caps Printing ₱2,000 · Food ₱3,000 · Shirts ₱1,500, adviser threshold ₱1,000.
 - **Vault must hold > ₱2,100** before the receipts: re-run `contracts/scripts/seed-testnet.js` + live payments.
 - **Receipts:** r1 tarp ₱850 (LOW → paid), r2 snacks ₱1,240 (needs adviser), r1 again (Blocked by AmbagVault), r3 injection (HIGH).
-- **QR** to `<vercel-url>/pay/0`; scan with Chrome or Google Lens.
+- **App:** https://ambagpay.vercel.app · **QR** `docs/qr-pay.png` → `/pay/0`; scan with Chrome or Google Lens.
 
 ## 9. What is left
 

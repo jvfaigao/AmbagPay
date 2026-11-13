@@ -1,13 +1,13 @@
 // POST /api/agent/review — Treasurer Agent, fixed pipeline (docs/AGENT.md fallback):
 // read → duplicate → budget → history → risk → simulate → propose. The model only returns data; this code acts.
 import { BaseError, ContractFunctionRevertedError, formatEther, isAddress, keccak256, parseEther, parseEventLogs, toBytes } from "viem";
-import { ambagVaultAbi } from "../../src/abi/AmbagVault";
-import { agentClient, publicClient, VAULT_ADDRESS } from "../_lib/chain";
-import { callerWallet } from "../_lib/auth";
-import { storeReceiptImage } from "../_lib/cloudinary";
-import { receipts } from "../_lib/firebase";
-import { readReceipt, reviewRisk, type Extraction, type ModelReview } from "../_lib/gemini";
-import { findSimilar, isSplit, RISK, riskFloor, type PastReceipt, type RiskLevel } from "../_lib/risk";
+import { ambagVaultAbi } from "../../src/abi/AmbagVault.js";
+import { agentClient, publicClient, VAULT_ADDRESS } from "../_lib/chain.js";
+import { callerWallet } from "../_lib/auth.js";
+import { storeReceiptImage } from "../_lib/cloudinary.js";
+import { receipts } from "../_lib/firebase.js";
+import { readReceipt, reviewRisk, type Extraction, type ModelReview } from "../_lib/gemini.js";
+import { findSimilar, isSplit, RISK, riskFloor, type PastReceipt, type RiskLevel } from "../_lib/risk.js";
 
 // Vercel rejects request bodies over 4.5 MB; 3 MB of image ≈ 4 MB of base64.
 const MAX_IMAGE_BYTES = 3 * 1024 * 1024;

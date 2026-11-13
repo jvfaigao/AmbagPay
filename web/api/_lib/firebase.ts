@@ -1,7 +1,7 @@
 // firebase-admin (Firestore only) from FIREBASE_SERVICE_ACCOUNT (JSON string). Server only.
 import { cert, getApps, initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
-import { CHAIN_ID } from "./chain";
+import { CHAIN_ID } from "./chain.js";
 
 function app() {
   if (getApps().length) return getApps()[0];

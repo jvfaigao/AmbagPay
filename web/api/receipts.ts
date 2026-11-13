@@ -1,6 +1,6 @@
 // GET /api/receipts?collectionId=0 -> public titles + agent verdicts for the ledger, keyed by expense id.
 // Only public fields leave the server (vendor, first item, risk, reason); never member data.
-import { receipts } from "./_lib/firebase";
+import { receipts } from "./_lib/firebase.js";
 
 const json = (body: object, status = 200) =>
   Response.json(body, { status, headers: { "cache-control": "public, max-age=5" } });
