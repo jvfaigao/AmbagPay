@@ -28,7 +28,7 @@ cd web && npm install && npm run dev
 - Only `VITE_` public values in the browser. Never import server keys.
 - Contract addresses and ABIs come from `src/config.ts` and `src/abi/` — no hardcoded addresses in components.
 - Amounts: `formatEther` → `₱` + 2 decimals with thousands separators.
-- Map contract custom errors to the Taglish messages in ARCHITECTURE.md.
+- All UI text is in English (decided Nov 13). Contract custom errors map to English text in `src/lib/errors.ts`.
 - Every tx shows: pending state → success with `TxLink` (testnet.bscscan.com) → refetch.
 - Keep pages working without login where possible (`/ledger/:id` must never require login).
 - Commit after each screen works: `feat(web): ledger reads categories from chain`.

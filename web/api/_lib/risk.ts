@@ -3,7 +3,12 @@
 export const RISK = ["LOW", "MEDIUM", "HIGH"] as const;
 export type RiskLevel = 0 | 1 | 2;
 
+// receipt = official receipt · digital = e-wallet/bank/online-order screenshot · none = no receipt, only a photo proof + the treasurer's explanation
+export const PROOF_TYPES = ["receipt", "digital", "none"] as const;
+export type ProofType = (typeof PROOF_TYPES)[number];
+
 export type FloorInput = {
+  proofType: ProofType;
   aiFailed: boolean;
   readable: boolean;
   amount: number | null; // pesos from the receipt
@@ -41,23 +46,26 @@ export function isSplit(past: PastReceipt[], payee: string, amount: number | nul
 
 export function riskFloor(i: FloorInput): { risk: RiskLevel; reasons: string[] } {
   const high: string[] = [];
-  if (i.aiFailed) high.push("AI review unavailable — kailangan ng human review");
-  if (!i.readable) high.push("Hindi mabasa ang resibo");
-  if (i.amount === null || !(i.amount > 0)) high.push("Walang malinaw na total sa resibo");
-  if (!i.categoryKnown) high.push("Hindi tugma sa kahit anong category");
-  if (i.duplicate) high.push("Nagamit na ang resibong ito");
+  if (i.aiFailed) high.push("AI review unavailable — needs human review");
+  // No receipt = the adviser must always approve (HIGH forces it in the contract). The photo is only proof, so it need not be readable.
+  if (i.proofType === "none") high.push("No receipt — the adviser must approve");
+  else if (!i.readable) high.push("Receipt is unreadable");
+  if (i.amount === null || !(i.amount > 0)) high.push("No clear total on the receipt");
+  if (!i.categoryKnown) high.push("Does not match any category");
+  if (i.duplicate) high.push("This receipt was already used");
   if (i.similarExpense !== null)
-    high.push(`Posibleng duplicate: parehong vendor, halaga at petsa${i.similarExpense >= 0 ? ` ng Expense #${i.similarExpense}` : ""}`);
-  if (i.suspiciousText.length > 0) high.push("May nakatagong instruction sa resibo");
-  if (i.amount !== null && i.amount > i.remaining) high.push("Lagpas sa natitirang budget");
+    high.push(`Possible duplicate: same vendor, amount and date${i.similarExpense >= 0 ? ` as Expense #${i.similarExpense}` : ""}`);
+  if (i.suspiciousText.length > 0) high.push("Hidden instruction found in the receipt");
+  if (i.amount !== null && i.amount > i.remaining) high.push("Over the remaining budget");
   if (high.length) return { risk: 2, reasons: high };
 
   const medium: string[] = [];
+  if (i.proofType === "digital") medium.push("Digital proof only, not an official receipt");
   const avg = i.pastAmounts.length ? i.pastAmounts.reduce((a, b) => a + b, 0) / i.pastAmounts.length : 0;
-  if (avg > 0 && i.amount! > 1.5 * avg) medium.push("Mas mataas sa karaniwang presyo");
-  if (!i.vendorSeen && i.amount! > 1000) medium.push("Bagong vendor at lampas ₱1,000");
-  if (i.categoryMismatch) medium.push("Iba ang category na pinili ng treasurer sa hula ng AI");
-  if (i.splitPattern) medium.push("Posibleng hinati ang gastos para hindi dumaan sa adviser");
+  if (avg > 0 && i.amount! > 1.5 * avg) medium.push("Higher than the usual price");
+  if (!i.vendorSeen && i.amount! > 1000) medium.push("New vendor and over ₱1,000");
+  if (i.categoryMismatch) medium.push("The treasurer chose a different category than the AI guessed");
+  if (i.splitPattern) medium.push("Expense may have been split to avoid the adviser");
   if (medium.length) return { risk: 1, reasons: medium };
 
   return { risk: 0, reasons: [] };

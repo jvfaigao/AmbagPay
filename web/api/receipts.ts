@@ -1,5 +1,5 @@
 // GET /api/receipts?collectionId=0 -> public titles + agent verdicts for the ledger, keyed by expense id.
-// Only public fields leave the server (vendor, first item, risk, reason); never member data.
+// Only public fields leave the server (vendor, first item, risk, reason, proof type, no-receipt note); never member data.
 import { receipts } from "./_lib/firebase.js";
 
 const json = (body: object, status = 200) =>
@@ -13,18 +13,24 @@ export default {
 
     try {
       const snap = await receipts().where("collectionId", "==", collectionId).get();
-      const expenses: Record<number, { title: string | null; risk: string; reason: string }> = {};
+      const expenses: Record<number, { title: string | null; risk: string; reason: string; proofType: string; note: string | null }> = {};
       for (const doc of snap.docs) {
         const x = doc.data();
         if (typeof x.expenseId !== "number") continue;
         const vendor = x.extracted?.vendor ?? null;
         const item = x.extracted?.items?.[0]?.name ?? null;
-        expenses[x.expenseId] = { title: [vendor, item].filter(Boolean).join(" · ") || null, risk: x.risk, reason: x.reason };
+        expenses[x.expenseId] = {
+          title: [vendor, item].filter(Boolean).join(" · ") || null,
+          risk: x.risk,
+          reason: x.reason,
+          proofType: x.proofType ?? "receipt", // older docs predate proof types
+          note: x.note || null, // treasurer's public explanation when there is no receipt
+        };
       }
       return json({ expenses });
     } catch (e) {
       console.error("receipts failed:", e instanceof Error ? e.message : e);
-      return json({ error: "Hindi ma-load ang mga resibo." }, 500);
+      return json({ error: "Could not load the receipts." }, 500);
     }
   },
 };

@@ -50,7 +50,7 @@ export default function Ledger() {
     queryFn: async () => {
       const res = await fetch(`/api/receipts?collectionId=${collectionId}`);
       if (!res.ok) throw new Error("receipts unavailable");
-      return (await res.json()).expenses as Record<number, { title: string | null; reason: string }>;
+      return (await res.json()).expenses as Record<number, { title: string | null; reason: string; proofType?: string; note?: string | null }>;
     },
     refetchInterval: 10_000,
     retry: false,
@@ -89,7 +89,8 @@ export default function Ledger() {
       <div className="flex gap-2">
         <Stat label="Collected" value={pesoShort(collection.totalCollected)} />
         <Stat label="Spent" value={pesoShort(collection.totalSpent)} />
-        <Stat label="Left" value={pesoShort(left)} />
+        {/* The contract does not count claimed refunds, so a closed fee shows the refund pool, not what is still in the vault. */}
+        <Stat label={closed ? "For refunds" : "Left"} value={pesoShort(left)} />
       </div>
       <p className="text-xs text-muted">
         Money is held by the AmbagVault contract, not by any officer.{" "}
@@ -104,6 +105,12 @@ export default function Ledger() {
         <Row label={`${peso(collection.amountPerMember)} per member`} value={`${collection.payerCount} of ${EXPECTED_MEMBERS} paid`} />
         <ProgressBar value={Math.min(100, (collection.payerCount / EXPECTED_MEMBERS) * 100)} />
         <p className="text-xs text-muted">Due {formatDate(collection.deadline)}</p>
+        {closed && (
+          <p className="text-sm text-dark">
+            Closed · <span className="font-semibold">{peso(collection.refundPerMember)} refund per member</span>
+            {collection.refundPerMember > 0n && <span className="text-muted"> (claim it on the Pay page)</span>}
+          </p>
+        )}
       </Card>
 
       <Card className="flex flex-col gap-2.5">
@@ -120,7 +127,7 @@ export default function Ledger() {
       <Card className="px-4 py-3 lg:px-6 lg:py-5">
         <Eyebrow>Expenses</Eyebrow>
         {expenses.length === 0 ? (
-          <p className="py-4 text-sm text-muted">Wala pang gastos sa collection na ito. Bawat gastos ay lalabas dito kasama ang resibo at approvals.</p>
+          <p className="py-4 text-sm text-muted">No expenses in this collection yet. Every expense shows up here with its receipt and approvals.</p>
         ) : (
           expenses.map(({ id: expenseId, e, needsAdviser }) => {
             const exp = e!;
@@ -140,6 +147,17 @@ export default function Ledger() {
                   <span className="font-semibold text-dark">{pesoShort(exp.amount)}</span>
                 </div>
                 {offChain?.reason && <p className="text-xs italic">Agent: "{offChain.reason}"</p>}
+                {offChain?.proofType === "none" && (
+                  <p className="flex flex-wrap items-center gap-1.5 text-xs">
+                    <Chip tone="risk">No receipt</Chip>
+                    {offChain.note && <span>Treasurer: "{offChain.note}"</span>}
+                  </p>
+                )}
+                {offChain?.proofType === "digital" && (
+                  <p className="text-xs">
+                    <Chip tone="neutral">Digital proof</Chip>
+                  </p>
+                )}
                 <ExpenseSteps status={exp.status} treasurer={exp.treasurerApproved} adviser={exp.adviserApproved} needsAdviser={needsAdviser} />
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
                   <Chip tone={exp.risk === 2 ? "risk" : exp.risk === 0 ? "green" : "neutral"}>{RISK_LABEL[exp.risk]} risk</Chip>

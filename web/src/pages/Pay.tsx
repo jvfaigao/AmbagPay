@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { usePrivy } from "@privy-io/react-auth";
 import { useAccount, usePublicClient, useReadContracts, useWriteContract } from "wagmi";
+import FeeList from "../components/FeeList";
 import Layout from "../components/Layout";
 import { Card, Chip, ErrorCard, Eyebrow, ExplorerLink, LoadingCard, ProgressBar, Row } from "../components/ui";
 import { CHAIN_ID, EXPECTED_MEMBERS, ORG_NAME, VAULT_ADDRESS } from "../config";
@@ -12,7 +13,7 @@ import { useOnboarding } from "../lib/useOnboarding";
 
 const REFRESH_MS = 4000;
 
-type Step = "idle" | "approving" | "paying" | "done";
+type Step = "idle" | "approving" | "paying" | "done" | "claiming" | "claimed";
 
 export default function Pay() {
   const { id } = useParams();
@@ -34,6 +35,7 @@ export default function Pay() {
     contracts: [
       { ...vault, functionName: "hasPaid", args: [collectionId, address!] },
       { ...token, functionName: "balanceOf", args: [address!] },
+      { ...vault, functionName: "hasClaimed", args: [collectionId, address!] },
     ],
     query: { enabled: !!address, refetchInterval: REFRESH_MS },
   });
@@ -42,6 +44,7 @@ export default function Pay() {
   const categories = base.data?.[1]?.result;
   const hasPaid = mine.data?.[0]?.result;
   const balance = mine.data?.[1]?.result;
+  const hasClaimed = mine.data?.[2]?.result;
 
   const { onboarding, onboardError } = useOnboarding(address, balance, mine.refetch);
 
@@ -51,7 +54,7 @@ export default function Pay() {
 
   async function confirmed(hash: `0x${string}`) {
     const receipt = await publicClient!.waitForTransactionReceipt({ hash });
-    if (receipt.status !== "success") throw new Error("Hindi natuloy ang transaction.");
+    if (receipt.status !== "success") throw new Error("The transaction did not go through.");
   }
 
   async function onPay() {
@@ -75,6 +78,21 @@ export default function Pay() {
     }
   }
 
+  async function onClaim() {
+    setError(undefined);
+    try {
+      setStep("claiming");
+      const hash = await writeContractAsync({ ...vault, functionName: "claimRefund", args: [collectionId] });
+      await confirmed(hash);
+      setTxHash(hash);
+      setStep("claimed");
+      await mine.refetch();
+    } catch (e) {
+      setError(friendlyError(e));
+      setStep("idle");
+    }
+  }
+
   if (base.isLoading) {
     return (
       <Layout title="AmbagPay" subtitle={ORG_NAME}>
@@ -92,14 +110,23 @@ export default function Pay() {
 
   const closed = collection.status === COLLECTION_STATUS.Closed;
   const tooPoor = balance !== undefined && balance < collection.amountPerMember;
-  const busy = step === "approving" || step === "paying";
+  const busy = step === "approving" || step === "paying" || step === "claiming";
   const paid = hasPaid === true || step === "done";
+  const refund = collection.refundPerMember;
+  const claimed = hasClaimed === true || step === "claimed";
+  const canClaim = closed && hasPaid === true && refund > 0n && !claimed;
   const amount = peso(collection.amountPerMember);
 
   // The one action on this page, pinned above the bottom nav like the deck prototype.
   let action = null;
   if (ready && !authenticated) {
-    action = <PrimaryButton onClick={login}>Sign in with Google to pay</PrimaryButton>;
+    action = <PrimaryButton onClick={login}>{closed ? "Sign in to claim your refund" : "Sign in with Google to pay"}</PrimaryButton>;
+  } else if (ready && canClaim) {
+    action = (
+      <PrimaryButton onClick={onClaim} disabled={busy}>
+        {step === "claiming" ? "Claiming refund…" : `Claim refund ${peso(refund)}`}
+      </PrimaryButton>
+    );
   } else if (ready && !paid) {
     action = (
       <PrimaryButton onClick={onPay} disabled={busy || onboarding || closed || tooPoor || balance === undefined}>
@@ -152,7 +179,16 @@ export default function Pay() {
       {authenticated && paid ? (
         <Card className="flex flex-col items-start gap-2 border-green p-5">
           <Chip tone="green">Paid ✓</Chip>
-          <p className="text-sm text-dark">Salamat! Recorded na sa BNB Smart Chain ang bayad mo.</p>
+          <p className="text-sm text-dark">Thank you! Your payment is recorded on BNB Smart Chain.</p>
+          {closed && (
+            <p className="text-sm text-dark">
+              {claimed
+                ? `Refund claimed ✓ ${peso(refund)} was returned to your wallet.`
+                : refund > 0n
+                  ? `This collection is closed. Your refund: ${peso(refund)}.`
+                  : "This collection is closed. No funds were left to refund."}
+            </p>
+          )}
           {txHash && (
             <p className="text-xs text-muted">
               Tx {shortAddress(txHash)} <ExplorerLink path={`tx/${txHash}`}>BscScan</ExplorerLink>
@@ -167,12 +203,13 @@ export default function Pay() {
           <Row label="Your balance" value={balance === undefined ? "…" : `${peso(balance)} tPHP`} />
           {onboarding && <p className="text-xs text-muted">Setting up your wallet…</p>}
           {onboardError && <p className="text-xs text-risk">{onboardError}</p>}
-          {tooPoor && !onboarding && <p className="text-xs text-risk">Kulang ang tPHP mo para sa bayad na ito.</p>}
+          {tooPoor && !onboarding && <p className="text-xs text-risk">Not enough tPHP for this payment.</p>}
         </div>
       ) : (
-        <p className="px-1 text-sm text-muted">Mag-sign in gamit ang Google. Gagawan ka ng wallet at bibigyan ng test pesos; walang gas fee.</p>
+        <p className="px-1 text-sm text-muted">Sign in with Google. We create a wallet for you and give you test pesos; no gas fee.</p>
       )}
-      {error && <ErrorCard title="Hindi natuloy ang bayad" message={error} />}
+      {error && <ErrorCard title="Payment failed" message={error} />}
+      <FeeList currentId={collectionId} member={address} />
     </Layout>
   );
 }

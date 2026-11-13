@@ -40,7 +40,7 @@ export function LoadingCard({ label = "Loading from BNB Smart Chain…" }: { lab
   return <Card className="text-sm text-muted">{label}</Card>;
 }
 
-export function ErrorCard({ message, title = "Hindi ma-load ang data" }: { message: string; title?: string }) {
+export function ErrorCard({ message, title = "Could not load the data" }: { message: string; title?: string }) {
   return (
     <Card className="border-risk text-sm">
       <p className="font-semibold text-risk">{title}</p>

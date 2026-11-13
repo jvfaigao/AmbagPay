@@ -33,6 +33,17 @@ Use fake vendors/data only (free-tier AI). Keep digital copies on two laptops.
 | 5 | Treasurer phone | Upload `r3` (injection) | "Paano kung may nakatagong utos sa AI?" → flagged, HIGH, adviser required |
 | 6 | Laptop | Ledger shows paid + rejected rows | "The AI can make the rules stricter, never looser." |
 
+### Optional: leftover refund (Q&A or if time allows, ~40 s)
+
+Prep before the pitch: treasurer phone → `/officer` → "Admin · Fees" → create "Refund Demo" ₱20 (category Misc ₱10). Member phone pays it.
+
+| # | Who/where | Do | Say |
+|---|---|---|---|
+| 7 | Treasurer phone | `/officer` → "Close + refund" on "Refund Demo" | "Tapos na ang event. Ang sobra, hindi napupunta sa officer." |
+| 8 | Member phone | `/pay/<id>` → "Claim refund ₱20.00" → "Refund claimed ✓" | "Every peso, accounted for, kasama ang sukli." |
+
+Never close collection 0 (the live demo fee): closing cannot be undone. The web app hides that button for it.
+
 ## Backup plan
 
 - Network dies → switch to phone hotspot → still dies → play the backup video (laptop + USB).

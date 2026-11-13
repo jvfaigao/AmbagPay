@@ -7,7 +7,7 @@ import { callerWallet } from "../_lib/auth.js";
 import { storeReceiptImage } from "../_lib/cloudinary.js";
 import { receipts } from "../_lib/firebase.js";
 import { readReceipt, reviewRisk, type Extraction, type ModelReview } from "../_lib/gemini.js";
-import { findSimilar, isSplit, RISK, riskFloor, type PastReceipt, type RiskLevel } from "../_lib/risk.js";
+import { findSimilar, isSplit, PROOF_TYPES, RISK, riskFloor, type PastReceipt, type ProofType, type RiskLevel } from "../_lib/risk.js";
 
 // Vercel rejects request bodies over 4.5 MB; 3 MB of image ≈ 4 MB of base64.
 const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
@@ -19,7 +19,16 @@ const json = (body: object, status = 200) => Response.json(body, { status });
 const pesos = (wei: bigint) => Number(formatEther(wei));
 const php = (n: number) => "₱" + n.toLocaleString("en-PH", { maximumFractionDigits: 2 });
 
-type Body = { collectionId?: number; imageBase64?: string; mimeType?: string; payee?: string; categoryIndex?: number | null };
+type Body = {
+  collectionId?: number;
+  imageBase64?: string;
+  mimeType?: string;
+  payee?: string;
+  categoryIndex?: number | null;
+  proofType?: string;
+  amount?: number; // pesos, typed by the treasurer; only used when proofType = "none"
+  note?: string; // treasurer's explanation, required when proofType = "none"; public on the ledger, never sent to the model
+};
 
 export default {
   async fetch(request: Request) {
@@ -28,6 +37,16 @@ export default {
     // 1) Validate input (trust boundary).
     const body = (await request.json().catch(() => null)) as Body | null;
     const { collectionId, imageBase64, mimeType, payee, categoryIndex: chosenIndex } = body ?? {};
+    const proofType = (body?.proofType ?? "receipt") as ProofType;
+    if (!PROOF_TYPES.includes(proofType)) return json({ error: "Invalid proofType" }, 400);
+    const note = proofType === "none" ? String(body?.note ?? "").trim() : "";
+    const typedAmount = body?.amount;
+    if (proofType === "none") {
+      if (note.length < 10 || note.length > 300) return json({ error: "Explain why there is no receipt (10–300 characters)." }, 400);
+      if (typeof typedAmount !== "number" || !Number.isFinite(typedAmount) || typedAmount < 1 || typedAmount > 1_000_000)
+        return json({ error: "Enter the amount paid." }, 400);
+      if (chosenIndex == null) return json({ error: "Choose a category for an expense with no receipt." }, 400);
+    }
     if (!Number.isInteger(collectionId) || collectionId! < 0) return json({ error: "Invalid collectionId" }, 400);
     const chosen = chosenIndex ?? null; // treasurer's category pick; null = let the AI choose
     if (chosen !== null && (!Number.isInteger(chosen) || chosen < 0)) return json({ error: "Invalid categoryIndex" }, 400);
@@ -41,9 +60,9 @@ export default {
     try {
       // The uploader is proven by the Privy token, not taken from the body.
       const uploader = await callerWallet(request);
-      if (!uploader) return json({ error: "Mag-login muna." }, 401);
+      if (!uploader) return json({ error: "Please sign in first." }, 401);
       const isTreasurer = await publicClient.readContract({ ...vault, functionName: "hasRole", args: [TREASURER_ROLE, uploader] });
-      if (!isTreasurer) return json({ error: "Treasurer lang ang puwedeng mag-upload ng resibo." }, 403);
+      if (!isTreasurer) return json({ error: "Only the treasurer can upload receipts." }, 403);
 
       // 2) Hash is computed here from the raw bytes, never by the client or the model.
       const receiptHash = keccak256(bytes);
@@ -73,9 +92,9 @@ export default {
           imageUrl: original?.imageUrl ?? "",
           extracted: original?.extracted ?? null,
           categoryIndex: original?.categoryIndex ?? -1,
-          checks: [{ id: "duplicate", pass: false, label: `Nagamit na ang resibong ito${seenAs}` }],
+          checks: [{ id: "duplicate", pass: false, label: `This receipt was already used${seenAs}` }],
           risk: "HIGH",
-          reason: `Nagamit na ang resibong ito${seenAs}. Hinarang ng AmbagVault; walang perang gumalaw.`,
+          reason: `This receipt was already used${seenAs}. Blocked by AmbagVault; no money moved.`,
           outcome: "blocked",
           blockedBy,
         });
@@ -96,7 +115,8 @@ export default {
         aiFailed = true;
       }
 
-      const amount = extracted?.total ?? null;
+      // No receipt: the photo has no reliable total, so the treasurer's typed amount is used (HIGH risk, adviser must check it).
+      const amount = proofType === "none" ? typedAmount! : (extracted?.total ?? null);
       const guess = extracted?.categoryGuess?.trim().toLowerCase();
       const aiIndex = categories.findIndex((c) => c.name.toLowerCase() === guess);
       if (chosen !== null && chosen >= categories.length) return json({ error: "Invalid categoryIndex" }, 400);
@@ -120,6 +140,7 @@ export default {
 
       // 5) Risk: code floor first, the model can only raise it.
       const floor = riskFloor({
+        proofType,
         aiFailed,
         readable: extracted?.readable ?? false,
         amount,
@@ -135,7 +156,8 @@ export default {
       });
 
       let model: ModelReview | null = null;
-      if (!aiFailed) {
+      // No receipt is already HIGH; the model would only judge a photo with no total, so the code reasons stand alone.
+      if (!aiFailed && proofType !== "none") {
         try {
           model = await reviewRisk({
             extracted,
@@ -154,12 +176,12 @@ export default {
       const risk = Math.max(floor.risk, modelRisk) as RiskLevel;
       const reason = model
         ? model.reason + (floor.reasons.length ? ` (${floor.reasons.join("; ")})` : "")
-        : floor.reasons.join("; ") || "AI review unavailable — kailangan ng human review";
+        : floor.reasons.join("; ") || "AI review unavailable — needs human review";
 
       const avg = pastAmounts.length ? pastAmounts.reduce((a, b) => a + b, 0) / pastAmounts.length : 0;
       const hidden = (extracted?.suspiciousText.length ?? 0) > 0 || !!model?.flags.includes("hidden_instruction");
       const checks = [
-        { id: "duplicate", pass: !duplicate, label: duplicate ? "Nagamit na ang resibong ito" : "Receipt not used before" },
+        { id: "duplicate", pass: !duplicate, label: duplicate ? "This receipt was already used" : "Receipt not used before" },
         {
           id: "budget",
           pass: amount !== null && amount <= remaining,
@@ -175,6 +197,9 @@ export default {
           ? [{ id: "similar", pass: false, label: `Same vendor, amount and date as ${similarExpense >= 0 ? `Expense #${similarExpense}` : "an earlier receipt"}` }]
           : []),
         ...(splitPattern ? [{ id: "split", pass: false, label: `Several small expenses to the same payee within 24 h add up to over ${php(pesos(adviserThreshold))}` }] : []),
+        ...(proofType !== "receipt"
+          ? [{ id: "proof", pass: false, label: proofType === "none" ? "No official receipt. The proof is only a photo; the adviser must approve." : "Digital proof (screenshot), not an official receipt." }]
+          : []),
         ...(categoryMismatch
           ? [{ id: "category", pass: false, label: `Treasurer chose ${category?.name}; AI guessed ${categories[aiIndex]?.name ?? "none"}` }]
           : []),
@@ -208,13 +233,13 @@ export default {
       // 8) Save for history + ledger titles. Only proposed receipts, so a duplicate never overwrites the original.
       await receipts()
         .doc(receiptHash)
-        .set({ collectionId, categoryIndex, payee, imageUrl, extracted, risk: RISK[risk], reason, checks, expenseId, txHash, createdAt: Date.now() })
+        .set({ collectionId, categoryIndex, payee, imageUrl, extracted, amount, proofType, note, risk: RISK[risk], reason, checks, expenseId, txHash, createdAt: Date.now() })
         .catch((e) => console.error("save failed:", errText(e)));
 
       return json({ ...result, outcome: "proposed", expenseId, txHash, blockedBy: null });
     } catch (e) {
       console.error("review failed:", errText(e));
-      return json({ error: "Hindi natapos ang review. Subukan ulit." }, 500);
+      return json({ error: "The review did not finish. Please try again." }, 500);
     }
   },
 };
@@ -228,7 +253,7 @@ async function pastReceipts(collectionId: number): Promise<(PastReceipt & { cate
       return {
         categoryIndex: x.categoryIndex,
         vendor: x.extracted?.vendor ?? null,
-        total: x.extracted?.total ?? null,
+        total: x.amount ?? x.extracted?.total ?? null, // amount = what was proposed (older docs only have extracted.total)
         date: x.extracted?.date ?? null,
         payee: x.payee ?? null, // older docs have no payee
         expenseId: x.expenseId ?? null,

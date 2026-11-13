@@ -1,17 +1,20 @@
 import { BaseError, ContractFunctionRevertedError } from "viem";
 
-// Contract custom error -> friendly text (table in docs/ARCHITECTURE.md).
+// Contract custom error -> friendly English text.
 const CONTRACT_ERRORS: Record<string, string> = {
-  AlreadyPaid: "Bayad ka na sa collection na ito.",
-  ReceiptAlreadyUsed: "Nagamit na ang resibong ito.",
-  OverBudget: "Lagpas na sa budget ng category.",
-  InsufficientFunds: "Kulang ang pondo ng collection.",
-  AdviserRequired: "Kailangan ng approval ng adviser.",
-  NotApproved: "Hindi pa naa-approve ng treasurer.",
-  NotApprover: "Wala kang permiso para dito.",
-  NotProposer: "Wala kang permiso para dito.",
-  PendingExpenses: "May pending pa na gastos.",
-  NothingToClaim: "Wala kang refund na makukuha.",
+  AlreadyPaid: "You already paid this collection.",
+  ReceiptAlreadyUsed: "This receipt was already used.",
+  OverBudget: "Over the category budget.",
+  InsufficientFunds: "The collection does not have enough funds.",
+  AdviserRequired: "Adviser approval is required.",
+  NotApproved: "The treasurer has not approved this yet.",
+  NotApprover: "You do not have permission to do this.",
+  NotProposer: "You do not have permission to do this.",
+  PendingExpenses: "There are still pending expenses.",
+  NothingToClaim: "You have no refund to claim.",
+  NotOpen: "This collection is already closed.",
+  NotClosed: "This collection is not closed yet.",
+  InvalidInput: "Something is missing or wrong in the form (name, amount or categories).",
 };
 
 export function friendlyError(e: unknown): string {
@@ -19,8 +22,8 @@ export function friendlyError(e: unknown): string {
     const revert = e.walk((x) => x instanceof ContractFunctionRevertedError);
     const name = revert instanceof ContractFunctionRevertedError ? revert.data?.errorName : undefined;
     if (name && CONTRACT_ERRORS[name]) return CONTRACT_ERRORS[name];
-    if (e.walk((x) => x instanceof Error && x.name === "UserRejectedRequestError")) return "Kinansela ang transaction.";
+    if (e.walk((x) => x instanceof Error && x.name === "UserRejectedRequestError")) return "Transaction cancelled.";
     return e.shortMessage;
   }
-  return e instanceof Error ? e.message : "May error. Subukan ulit.";
+  return e instanceof Error ? e.message : "Something went wrong. Please try again.";
 }
