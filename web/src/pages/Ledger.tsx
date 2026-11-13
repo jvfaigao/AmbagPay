@@ -50,7 +50,7 @@ export default function Ledger() {
     queryFn: async () => {
       const res = await fetch(`/api/receipts?collectionId=${collectionId}`);
       if (!res.ok) throw new Error("receipts unavailable");
-      return (await res.json()).expenses as Record<number, { title: string | null; reason: string; proofType?: string; note?: string | null }>;
+      return (await res.json()).expenses as Record<number, { title: string | null; reason: string; proofType?: string; note?: string | null; txHash?: string | null }>;
     },
     refetchInterval: 10_000,
     retry: false,
@@ -167,6 +167,7 @@ export default function Ledger() {
                       Receipt ↗
                     </a>
                   )}
+                  {offChain?.txHash && <ExplorerLink path={`tx/${offChain.txHash}`}>BscScan</ExplorerLink>}
                 </div>
               </div>
             );
