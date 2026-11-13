@@ -20,7 +20,7 @@ export default function Layout({ title, subtitle, children, footnote, bottom, wi
   const tabs = TABS.filter((t) => !t.only || (t.only === "officer" ? roles.isTreasurer || roles.isAdviser : roles.isAdmin));
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-cream lg:max-w-6xl">
-      <header className="flex flex-col gap-3 px-5 pb-4 pt-6 lg:flex-row lg:items-center lg:gap-8 lg:px-8">
+      <header className="flex flex-col gap-3 px-5 pb-4 pt-6 lg:flex-row lg:items-center lg:gap-6 lg:px-8">
         <div className="flex items-center gap-3">
           <Link
             to="/"
@@ -34,20 +34,20 @@ export default function Layout({ title, subtitle, children, footnote, bottom, wi
             {subtitle && <p className="truncate text-xs font-medium text-muted">{subtitle}</p>}
           </div>
         </div>
-        <nav aria-label="Main" className="hidden rounded-full bg-sand p-1 lg:flex lg:gap-1">
+        <nav aria-label="Main" className="hidden shrink-0 rounded-full bg-sand p-1 lg:flex lg:gap-0.5">
           {tabs.map((t) => (
             <NavLink
               key={t.label}
               to={t.to}
               className={() =>
-                `rounded-full px-3.5 py-1.5 text-sm font-semibold outline-none focus-visible:outline-2 focus-visible:outline-green ${section(t.to) === current ? "bg-paper text-dark shadow-card" : "text-muted hover:text-dark"}`
+                `whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-semibold outline-none focus-visible:outline-2 focus-visible:outline-green ${section(t.to) === current ? "bg-paper text-dark shadow-card" : "text-muted hover:text-dark"}`
               }
             >
               {t.label}
             </NavLink>
           ))}
         </nav>
-        <div className="lg:ml-auto lg:min-w-0">
+        <div className="min-w-0 lg:ml-auto">
           <LoginChip />
         </div>
       </header>

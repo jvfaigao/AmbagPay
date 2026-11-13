@@ -1,13 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
-import { useReadContracts } from "wagmi";
+import { useReadContract, useReadContracts } from "wagmi";
 import Layout from "../components/Layout";
 import { Card, Chip, ErrorCard, ExpenseSteps, Eyebrow, ExplorerLink, LoadingCard, ProgressBar, Row } from "../components/ui";
 import { EXPECTED_MEMBERS, ORG_NAME, VAULT_ADDRESS } from "../config";
-import { COLLECTION_STATUS, RISK_LABEL, vault } from "../lib/contracts";
+import { COLLECTION_STATUS, RISK_LABEL, token, vault } from "../lib/contracts";
 import { friendlyError } from "../lib/errors";
 import { formatDate, percent, peso, pesoShort, shortAddress } from "../lib/format";
-import { useCollections } from "../lib/useCollections";
+import { useCollections, type CollectionSummary } from "../lib/useCollections";
 
 const REFRESH_MS = 4000;
 
@@ -25,7 +25,9 @@ export default function Ledger() {
     query: { refetchInterval: REFRESH_MS },
   });
 
-  const { collections } = useCollections();
+  const { collections } = useCollections(undefined, REFRESH_MS);
+  // What the vault actually holds for every fee together (same number as BscScan's token holdings).
+  const vaultBalance = useReadContract({ ...token, functionName: "balanceOf", args: [VAULT_ADDRESS], query: { refetchInterval: REFRESH_MS } });
   const collection = base.data?.[0]?.result;
   const categories = base.data?.[1]?.result;
   const expenseCount = Number(base.data?.[2]?.result ?? 0n);
@@ -86,6 +88,19 @@ export default function Ledger() {
       footnote="Anyone can view this page · Live from BNB Smart Chain"
       wide
     >
+      <FeeSwitcher collections={collections} current={collectionId} />
+      {collections.length > 1 && (
+        <p className="-mt-1 px-1 text-xs text-muted lg:text-sm">
+          All fees: <span className="font-semibold text-dark">{pesoShort(collections.reduce((t, c) => t + c.totalCollected, 0n))} collected</span>
+          {vaultBalance.data !== undefined && (
+            <>
+              {" · "}
+              <span className="font-semibold text-dark">{pesoShort(vaultBalance.data)} in the vault</span>
+            </>
+          )}
+        </p>
+      )}
+
       {/* Laptop/projector: summary on the left (sticky), expenses on the right. Phone: one column. */}
       <div className="grid items-start gap-3.5 lg:grid-cols-[5fr_7fr] lg:gap-6">
       <div className="flex flex-col gap-3.5 lg:sticky lg:top-6">
@@ -126,18 +141,6 @@ export default function Ledger() {
         ))}
       </Card>
 
-      {collections.length > 1 && (
-        <Card className="flex flex-col items-start gap-1.5">
-          <Eyebrow>Other fees</Eyebrow>
-          {collections
-            .filter((c) => c.id !== collectionId)
-            .map((c) => (
-              <Link key={c.id.toString()} to={`/ledger/${c.id}`} className="text-sm font-semibold text-green underline-offset-2 hover:underline">
-                {c.name} ledger ›
-              </Link>
-            ))}
-        </Card>
-      )}
       </div>
 
       <Card className="px-4 py-3 lg:px-6 lg:py-5">
@@ -192,6 +195,30 @@ export default function Ledger() {
       </Card>
       </div>
     </Layout>
+  );
+}
+
+/** One pill per fee, so it is always clear which fee's ledger is open. Scrolls sideways when there are many. */
+function FeeSwitcher({ collections, current }: { collections: CollectionSummary[]; current: bigint }) {
+  if (collections.length < 2) return null;
+  return (
+    <nav aria-label="Fees" className="-mx-1 overflow-x-auto px-1">
+      <div className="flex w-max gap-1 rounded-full bg-sand p-1 text-sm font-semibold">
+        {collections.map((c) => {
+          const on = c.id === current;
+          return (
+            <Link
+              key={c.id.toString()}
+              to={`/ledger/${c.id}`}
+              aria-current={on ? "page" : undefined}
+              className={`whitespace-nowrap rounded-full px-3.5 py-2 focus-visible:outline-2 focus-visible:outline-green ${on ? "bg-paper text-dark shadow-card" : "text-muted hover:text-dark"}`}
+            >
+              {c.name} <span className={on ? "text-muted" : ""}>· {pesoShort(c.amountPerMember)}</span>
+            </Link>
+          );
+        })}
+      </div>
+    </nav>
   );
 }
 

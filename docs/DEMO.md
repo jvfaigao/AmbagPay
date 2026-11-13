@@ -22,6 +22,18 @@ Files: `docs/demo-receipts/` (r1, r1b, r2, r3 as PNG). Vault on Nov 13 morning: 
 
 Use fake vendors/data only (free-tier AI). Keep digital copies on two laptops.
 
+### Rehearsal receipts (never upload r1/r3 before the live demo)
+
+Uploading a receipt locks its hash on-chain forever, and fee 0's history feeds the "same vendor/amount" and "split" checks.
+So rehearse on **fee 2 "org shirt"** (₱500 collected, separate history), never fee 0. One set per run:
+
+| Set | Normal (approve → paid) | Duplicate | Injection (leave pending) |
+|---|---|---|---|
+| A | `rehearsal-a1-shirt-180.png` | a1 again | `rehearsal-a2-injection-160.png` |
+| B | `rehearsal-b1-shirt-150.png` | b1 again | `rehearsal-b2-injection-140.png` |
+
+After A + B, fee 2 has ₱170 left. Each set works once; for a third run make new files with a different vendor and amount.
+
 ## Live demo script (~2 min inside the 3-min pitch)
 
 | # | Who/where | Do | Say |
