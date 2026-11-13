@@ -7,7 +7,7 @@ const path = require("path");
 const hre = require("hardhat");
 const { ethers } = hre;
 
-const MEMBERS = 8; // 8 × ₱150 = ₱1,200 in the vault; live demo payments add the rest
+const MEMBERS = Number(process.env.MEMBERS || 8); // 8 × ₱150 = ₱1,200 in the vault; live demo payments add the rest
 const MEMBER_GAS = ethers.parseEther("0.001"); // approve + pay, with room to spare
 const AGENT_GAS = ethers.parseEther("0.02"); // ~a hundred proposeExpense calls
 

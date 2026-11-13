@@ -16,6 +16,7 @@ module.exports = {
     bscTestnet: {
       url: process.env.BSC_TESTNET_RPC || "https://data-seed-prebsc-1-s1.bnbchain.org:8545",
       chainId: 97,
+      gasPrice: 100_000_000, // 0.1 gwei = BSC testnet minimum; auto-estimated tips sometimes come in below it
       accounts: PRIVATE_KEY ? [PRIVATE_KEY] : [],
     },
   },
