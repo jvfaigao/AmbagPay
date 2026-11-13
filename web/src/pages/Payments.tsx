@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { usePrivy } from "@privy-io/react-auth";
 import { useAccount } from "wagmi";
 import Layout from "../components/Layout";
+import WalletCard from "../components/WalletCard";
 import { Card, Chip, Eyebrow, ExplorerLink, LoadingCard, ProgressBar, Row, Stats } from "../components/ui";
 import { ORG_NAME } from "../config";
 import { COLLECTION_STATUS } from "../lib/contracts";
@@ -47,10 +48,15 @@ export default function Payments() {
   const unpaid = collections.filter((c) => !c.paid);
   const total = paid.reduce((s, c) => s + c.amountPerMember, 0n);
   const due = unpaid.filter((c) => c.status === COLLECTION_STATUS.Open).reduce((s, c) => s + c.amountPerMember, 0n);
+  // Cheapest open fee still unpaid: if the balance is below this, the member cannot pay any fee.
+  const nextDue = unpaid
+    .filter((c) => c.status === COLLECTION_STATUS.Open)
+    .reduce<CollectionSummary | undefined>((min, c) => (!min || c.amountPerMember < min.amountPerMember ? c : min), undefined);
   const paymentFor = (id: bigint) => events.data?.find((p) => p.collectionId === id);
 
   return (
     <Layout title="My payments" subtitle={ORG_NAME}>
+      <WalletCard address={address} nextDue={nextDue && { name: nextDue.name, amount: nextDue.amountPerMember }} />
       <Stats
         items={[
           { label: "Total paid", value: pesoShort(total) },
