@@ -3,6 +3,7 @@ import { usePrivy } from "@privy-io/react-auth";
 import { keccak256, toBytes } from "viem";
 import { useAccount, usePublicClient, useReadContracts, useWriteContract } from "wagmi";
 import Layout from "../components/Layout";
+import MembersCard from "../components/MembersCard";
 import { Card, Chip, ErrorCard, ExpenseSteps, Eyebrow, ExplorerLink, LoadingCard } from "../components/ui";
 import { CHAIN_ID, DEMO_COLLECTION_ID, ORG_NAME } from "../config";
 import { EXPENSE_STATUS, RISK_LABEL, vault } from "../lib/contracts";
@@ -91,6 +92,7 @@ export default function Officer() {
           )}
           <div className="flex flex-col gap-3.5">
             <PendingList count={expenseCount} categories={categories} isTreasurer={isTreasurer} isAdviser={isAdviser} />
+            <MembersCard collectionId={collectionId} canUpload={isTreasurer} />
           </div>
         </div>
       </>

@@ -1,8 +1,9 @@
 // POST /api/onboard (Authorization: Bearer <Privy access token>) -> gives the caller's wallet a little gas + ₱1,000 tPHP.
 import { parseEther } from "viem";
 import { mockPhpAbi } from "../src/abi/MockPHP.js";
-import { callerWallet } from "./_lib/auth.js";
+import { callerAccount } from "./_lib/auth.js";
 import { faucetClient, publicClient, TOKEN_ADDRESS } from "./_lib/chain.js";
+import { members } from "./_lib/firebase.js";
 
 const GAS_DRIP = parseEther("0.001"); // ~70 txs at 0.1 gwei; keeps the faucet alive for ~260 new users
 const MIN_GAS = parseEther("0.0005"); // below this a wallet cannot send a few txs; keep in sync with src/lib/useOnboarding.ts
@@ -15,8 +16,12 @@ export default {
     if (request.method !== "POST") return json({ error: "POST only" }, 405);
 
     // Only a logged-in Privy user, and only their own wallet: random addresses cannot drain the faucet.
-    const address = await callerWallet(request);
-    if (!address) return json({ error: "Mag-login muna." }, 401);
+    const account = await callerAccount(request);
+    if (!account) return json({ error: "Mag-login muna." }, 401);
+    const { address, email } = account;
+
+    // Remember Google email → wallet so officers can match the class list to on-chain payments. Fail-soft.
+    if (email) await members().doc(email).set({ address, updatedAt: Date.now() }).catch((e) => console.error("member save failed:", e?.message ?? e));
 
     try {
       // The chain is the memory: only top up what is missing, so repeat calls cost nothing.

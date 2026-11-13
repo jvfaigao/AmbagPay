@@ -14,3 +14,6 @@ export const db = () => getFirestore(app());
 
 // One collection per chain, so local test receipts never show up on the testnet ledger.
 export const receipts = () => db().collection(`receipts-${CHAIN_ID}`);
+// Officers-only personal data (Google email ↔ wallet, class lists). Never on-chain, never on the public ledger.
+export const members = () => db().collection(`members-${CHAIN_ID}`); // doc id = lowercase email → { address }
+export const rosters = () => db().collection(`rosters-${CHAIN_ID}`); // doc id = collectionId → { students, uploadedAt }
