@@ -4,6 +4,7 @@ import Ledger from "./pages/Ledger";
 import Pay from "./pages/Pay";
 import Officer from "./pages/Officer";
 import Payments from "./pages/Payments";
+import Records from "./pages/Records";
 import { isConfigured } from "./config";
 
 export default function App() {
@@ -28,6 +29,7 @@ export default function App() {
       <Route path="/pay/:id" element={<Pay />} />
       <Route path="/officer" element={<Officer />} />
       <Route path="/payments" element={<Payments />} />
+      <Route path="/records" element={<Records />} />
       <Route path="*" element={<Home />} />
     </Routes>
   );

@@ -1,11 +1,9 @@
 import { useMemo, useState } from "react";
 import { usePrivy } from "@privy-io/react-auth";
-import { useQuery } from "@tanstack/react-query";
 import { Card, Chip, ErrorCard, Eyebrow, ProgressBar } from "./ui";
 import { shortAddress } from "../lib/format";
+import { useRoster } from "../lib/useRoster";
 
-type Student = { studentId: string; name: string; section: string; email: string; paid: boolean; loggedIn: boolean };
-type Roster = { uploadedAt: number | null; students: Student[]; notOnRoster: { email: string; address: string }[] };
 
 /** Officers only: upload the class list (CSV) and see who has paid, per section. */
 export default function MembersCard({ collectionId, canUpload }: { collectionId: bigint; canUpload: boolean }) {
@@ -15,17 +13,7 @@ export default function MembersCard({ collectionId, canUpload }: { collectionId:
   const [uploading, setUploading] = useState(false);
   const [uploadMsg, setUploadMsg] = useState<{ ok: boolean; text: string; errors?: string[] }>();
 
-  const roster = useQuery({
-    queryKey: ["roster", collectionId.toString()],
-    queryFn: async () => {
-      const res = await fetch(`/api/roster?collectionId=${collectionId}`, { headers: { authorization: `Bearer ${await getAccessToken()}` } });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
-      return data as Roster;
-    },
-    refetchInterval: 15_000,
-    retry: false,
-  });
+  const roster = useRoster(collectionId);
 
   async function onUpload(file: File | undefined) {
     if (!file) return;

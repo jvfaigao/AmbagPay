@@ -79,7 +79,7 @@ export default {
       const onRoster = new Set(students.map((s) => s.email));
       return json({
         uploadedAt: rosterDoc.data()?.uploadedAt ?? null,
-        students: students.map((s) => ({ ...s, paid: paidByEmail.get(s.email) === true, loggedIn: walletOf.has(s.email) })),
+        students: students.map((s) => ({ ...s, paid: paidByEmail.get(s.email) === true, loggedIn: walletOf.has(s.email), address: walletOf.get(s.email) ?? null })),
         // Paid with an email that is not on the list (e.g. a personal Gmail): officers can match them by hand.
         notOnRoster: wallets.filter(([email], i) => paidFlags[i] && !onRoster.has(email)).map(([email, address]) => ({ email, address })),
       });
