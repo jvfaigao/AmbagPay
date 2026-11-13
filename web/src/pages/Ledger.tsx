@@ -1,11 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { useReadContracts } from "wagmi";
 import Layout from "../components/Layout";
 import { Card, Chip, ErrorCard, ExpenseSteps, Eyebrow, ExplorerLink, LoadingCard, ProgressBar, Row } from "../components/ui";
 import { EXPECTED_MEMBERS, ORG_NAME, VAULT_ADDRESS } from "../config";
 import { COLLECTION_STATUS, RISK_LABEL, vault } from "../lib/contracts";
+import { friendlyError } from "../lib/errors";
 import { formatDate, percent, peso, pesoShort, shortAddress } from "../lib/format";
+import { useCollections } from "../lib/useCollections";
 
 const REFRESH_MS = 4000;
 
@@ -23,6 +25,7 @@ export default function Ledger() {
     query: { refetchInterval: REFRESH_MS },
   });
 
+  const { collections } = useCollections();
   const collection = base.data?.[0]?.result;
   const categories = base.data?.[1]?.result;
   const expenseCount = Number(base.data?.[2]?.result ?? 0n);
@@ -50,7 +53,7 @@ export default function Ledger() {
     queryFn: async () => {
       const res = await fetch(`/api/receipts?collectionId=${collectionId}`);
       if (!res.ok) throw new Error("receipts unavailable");
-      return (await res.json()).expenses as Record<number, { title: string | null; reason: string; proofType?: string; note?: string | null }>;
+      return (await res.json()).expenses as Record<number, { title: string | null; reason: string; proofType?: string; note?: string | null; txHash?: string | null }>;
     },
     refetchInterval: 10_000,
     retry: false,
@@ -64,11 +67,11 @@ export default function Ledger() {
     );
   }
 
-  const failure = base.error?.message ?? base.data?.[0]?.error?.message;
+  const failure = base.error ?? base.data?.[0]?.error;
   if (!collection || !categories) {
     return (
       <Layout title="Public Ledger" subtitle={ORG_NAME}>
-        <ErrorCard message={failure ?? "Collection not found."} />
+        <ErrorCard message={failure ? friendlyError(failure) : "Collection not found."} />
       </Layout>
     );
   }
@@ -122,6 +125,19 @@ export default function Ledger() {
           </div>
         ))}
       </Card>
+
+      {collections.length > 1 && (
+        <Card className="flex flex-col items-start gap-1.5">
+          <Eyebrow>Other fees</Eyebrow>
+          {collections
+            .filter((c) => c.id !== collectionId)
+            .map((c) => (
+              <Link key={c.id.toString()} to={`/ledger/${c.id}`} className="text-sm font-semibold text-green underline-offset-2 hover:underline">
+                {c.name} ledger ›
+              </Link>
+            ))}
+        </Card>
+      )}
       </div>
 
       <Card className="px-4 py-3 lg:px-6 lg:py-5">
@@ -167,6 +183,7 @@ export default function Ledger() {
                       Receipt ↗
                     </a>
                   )}
+                  {offChain?.txHash && <ExplorerLink path={`tx/${offChain.txHash}`}>BscScan</ExplorerLink>}
                 </div>
               </div>
             );
@@ -180,8 +197,8 @@ export default function Ledger() {
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex-1 rounded-[14px] border border-line bg-paper p-3">
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">{label}</p>
+    <div className="flex-1 rounded-[20px] bg-paper p-3.5 shadow-card">
+      <p className="text-xs text-muted">{label}</p>
       <p className="font-display text-lg font-bold text-dark lg:text-3xl">{value}</p>
     </div>
   );

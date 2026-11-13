@@ -36,6 +36,7 @@ export default function Pay() {
       { ...vault, functionName: "hasPaid", args: [collectionId, address!] },
       { ...token, functionName: "balanceOf", args: [address!] },
       { ...vault, functionName: "hasClaimed", args: [collectionId, address!] },
+      { ...token, functionName: "allowance", args: [address!, VAULT_ADDRESS] },
     ],
     query: { enabled: !!address, refetchInterval: REFRESH_MS },
   });
@@ -45,6 +46,7 @@ export default function Pay() {
   const hasPaid = mine.data?.[0]?.result;
   const balance = mine.data?.[1]?.result;
   const hasClaimed = mine.data?.[2]?.result;
+  const allowance = mine.data?.[3]?.result;
 
   const { onboarding, onboardError } = useOnboarding(address, balance, mine.refetch);
 
@@ -61,9 +63,12 @@ export default function Pay() {
     if (!collection || !publicClient) return;
     setError(undefined);
     try {
-      setStep("approving");
-      const approveHash = await writeContractAsync({ ...token, functionName: "approve", args: [VAULT_ADDRESS, collection.amountPerMember] });
-      await confirmed(approveHash);
+      // A retry after a failed pay already has the allowance: skip straight to step 2.
+      if (allowance === undefined || allowance < collection.amountPerMember) {
+        setStep("approving");
+        const approveHash = await writeContractAsync({ ...token, functionName: "approve", args: [VAULT_ADDRESS, collection.amountPerMember] });
+        await confirmed(approveHash);
+      }
 
       setStep("paying");
       const payHash = await writeContractAsync({ ...vault, functionName: "pay", args: [collectionId] });
@@ -103,7 +108,7 @@ export default function Pay() {
   if (!collection || !categories) {
     return (
       <Layout title="AmbagPay" subtitle={ORG_NAME}>
-        <ErrorCard message={base.error?.message ?? base.data?.[0]?.error?.message ?? "Collection not found."} />
+        <ErrorCard message={friendlyError(base.error ?? base.data?.[0]?.error ?? new Error("Collection not found."))} />
       </Layout>
     );
   }
@@ -177,7 +182,7 @@ export default function Pay() {
       </Card>
 
       {authenticated && paid ? (
-        <Card className="flex flex-col items-start gap-2 border-green p-5">
+        <Card className="flex flex-col items-start gap-2 bg-greenbg p-5 shadow-none">
           <Chip tone="green">Paid ✓</Chip>
           <p className="text-sm text-dark">Thank you! Your payment is recorded on BNB Smart Chain.</p>
           {closed && (
@@ -196,6 +201,9 @@ export default function Pay() {
           )}
           <Link to={`/ledger/${collectionId}`} className="text-sm font-semibold text-green underline-offset-2 hover:underline">
             See it on the public ledger
+          </Link>
+          <Link to="/payments" className="text-sm font-semibold text-green underline-offset-2 hover:underline">
+            See all my payments
           </Link>
         </Card>
       ) : authenticated ? (
@@ -219,7 +227,7 @@ function PrimaryButton({ children, onClick, disabled }: { children: React.ReactN
     <button
       onClick={onClick}
       disabled={disabled}
-      className="h-14 w-full rounded-[14px] bg-gold text-base font-bold text-dark shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-dark disabled:opacity-50"
+      className="h-14 w-full rounded-2xl bg-gold text-base font-bold text-dark shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-dark disabled:opacity-50"
     >
       {children}
     </button>

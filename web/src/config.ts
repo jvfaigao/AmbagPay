@@ -13,6 +13,11 @@ export const DEMO_COLLECTION_ID = Number(env.VITE_DEMO_COLLECTION_ID || 0);
 export const RPC_URL: string =
   env.VITE_RPC_URL || (CHAIN_ID === 31337 ? "http://127.0.0.1:8545" : "https://data-seed-prebsc-1-s1.bnbchain.org:8545");
 
+// Payment history (Paid events). The default bnbchain RPC refuses eth_getLogs, publicnode allows 50k-block ranges.
+export const LOGS_RPC_URL: string = env.VITE_LOGS_RPC_URL || (CHAIN_ID === 31337 ? RPC_URL : "https://bsc-testnet-rpc.publicnode.com");
+// A block just before AmbagVault was deployed (Nov 12, 2026), so log scans start there.
+export const VAULT_FROM_BLOCK = BigInt(env.VITE_VAULT_FROM_BLOCK || (CHAIN_ID === 31337 ? 0 : 142315350));
+
 // Empty on the local chain (no explorer), so links are hidden there.
 export const EXPLORER_URL = CHAIN_ID === 97 ? "https://testnet.bscscan.com" : "";
 

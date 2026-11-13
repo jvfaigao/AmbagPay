@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
 import { usePrivy } from "@privy-io/react-auth";
-import { keccak256, toBytes } from "viem";
+import { Link } from "react-router-dom";
 import { useAccount, usePublicClient, useReadContracts, useWriteContract } from "wagmi";
 import Layout from "../components/Layout";
-import AdminPanel from "../components/AdminPanel";
 import MembersCard from "../components/MembersCard";
 import { Card, Chip, ErrorCard, ExpenseSteps, Eyebrow, ExplorerLink, LoadingCard } from "../components/ui";
 import { CHAIN_ID, DEMO_COLLECTION_ID, ORG_NAME } from "../config";
@@ -13,11 +12,9 @@ import { shrinkImage } from "../lib/image";
 import { peso, shortAddress } from "../lib/format";
 import { useCollections } from "../lib/useCollections";
 import { useOnboarding } from "../lib/useOnboarding";
+import { useRoles } from "../lib/useRoles";
 
 const REFRESH_MS = 4000;
-const TREASURER_ROLE = keccak256(toBytes("TREASURER_ROLE"));
-const ADVISER_ROLE = keccak256(toBytes("ADVISER_ROLE"));
-const ADMIN_ROLE = keccak256(toBytes("ADMIN_ROLE"));
 
 type Category = { name: string; cap: bigint; spent: bigint };
 
@@ -28,14 +25,7 @@ export default function Officer() {
   const [collectionId, setCollectionId] = useState(BigInt(DEMO_COLLECTION_ID));
   const { collections } = useCollections();
 
-  const roles = useReadContracts({
-    contracts: [
-      { ...vault, functionName: "hasRole", args: [TREASURER_ROLE, address!] },
-      { ...vault, functionName: "hasRole", args: [ADVISER_ROLE, address!] },
-      { ...vault, functionName: "hasRole", args: [ADMIN_ROLE, address!] },
-    ],
-    query: { enabled: !!address },
-  });
+  const roles = useRoles();
   const base = useReadContracts({
     contracts: [
       { ...vault, functionName: "getCategories", args: [collectionId] },
@@ -44,9 +34,7 @@ export default function Officer() {
     query: { refetchInterval: REFRESH_MS },
   });
 
-  const isTreasurer = roles.data?.[0]?.result === true;
-  const isAdviser = roles.data?.[1]?.result === true;
-  const isAdmin = roles.data?.[2]?.result === true;
+  const { isTreasurer, isAdviser, isAdmin } = roles;
   const categories = base.data?.[0]?.result as readonly Category[] | undefined;
   const expenseCount = Number(base.data?.[1]?.result ?? 0n);
 
@@ -63,7 +51,7 @@ export default function Officer() {
         </ul>
         <button
           onClick={login}
-          className="h-14 rounded-[14px] bg-gold text-base font-bold text-dark focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-dark"
+          className="h-14 rounded-2xl bg-gold text-base font-bold text-dark focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-dark"
         >
           Sign in with Google
         </button>
@@ -76,7 +64,7 @@ export default function Officer() {
       <Card className="flex flex-col gap-1.5 text-sm">
         <p className="font-semibold text-dark">You do not have an officer role.</p>
         <p>Ask the admin to grant the TREASURER or ADVISER role to this address:</p>
-        <p className="break-all rounded-lg bg-[#ECE8DC] p-2 font-mono text-xs text-dark">{address}</p>
+        <p className="break-all rounded-lg bg-sand p-2 font-mono text-xs text-dark">{address}</p>
         <p className="text-xs text-muted">After it is granted, refresh this page.</p>
       </Card>
     );
@@ -85,7 +73,7 @@ export default function Officer() {
       <>
         <p className="text-sm lg:text-base">
           Signed in as <span className="font-semibold text-dark">{isAdviser ? "Adviser" : isTreasurer ? "Treasurer" : "Admin"}{isAdmin && (isAdviser || isTreasurer) ? " + Admin" : ""}</span>
-          {isAdviser ? ": you give the second approval on big or HIGH-risk expenses." : isTreasurer ? ": upload receipts and give the first approval." : ": create and close fees."}
+          {isAdviser ? ": you give the second approval on big or HIGH-risk expenses." : isTreasurer ? ": upload receipts and give the first approval." : ": assign officers and manage fees on the Admin page."}
         </p>
         {onboarding && <p className="text-xs text-muted">Setting up your wallet…</p>}
         {onboardError && <p className="text-xs text-risk">{onboardError}</p>}
@@ -95,7 +83,7 @@ export default function Officer() {
             <select
               value={collectionId.toString()}
               onChange={(e) => setCollectionId(BigInt(e.target.value))}
-              className="rounded-[10px] border border-line bg-white px-3 py-2"
+              className="input"
             >
               {collections.map((c) => (
                 <option key={c.id.toString()} value={c.id.toString()}>
@@ -116,7 +104,15 @@ export default function Officer() {
           <div className="flex flex-col gap-3.5">
             <PendingList collectionId={collectionId} count={expenseCount} categories={categories} isTreasurer={isTreasurer} isAdviser={isAdviser} />
             <MembersCard collectionId={collectionId} canUpload={isTreasurer} />
-            {isAdmin && <AdminPanel address={address} />}
+            {isAdmin && (
+              <Card className="flex flex-col items-start gap-1 text-sm">
+                <Eyebrow>Admin</Eyebrow>
+                <p>Officers, fees and categories are on the Admin page.</p>
+                <Link to="/admin" className="font-semibold text-green underline-offset-2 hover:underline">
+                  Open Admin ›
+                </Link>
+              </Card>
+            )}
           </div>
         </div>
       </>
@@ -214,7 +210,7 @@ function ReviewPanel({ collectionId, address, categories }: { collectionId: bigi
           value={proofType}
           onChange={(e) => setProofType(e.target.value as typeof proofType)}
           disabled={busy}
-          className="rounded-[10px] border border-line bg-white px-3 py-2"
+          className="input"
         >
           <option value="receipt">Official receipt</option>
           <option value="digital">Digital proof (GCash, bank, online order screenshot)</option>
@@ -231,7 +227,7 @@ function ReviewPanel({ collectionId, address, categories }: { collectionId: bigi
           capture="environment"
           disabled={busy}
           onChange={(e) => onPick(e.target.files?.[0])}
-          className="text-sm file:mr-3 file:rounded-[10px] file:border-0 file:bg-[#ECE8DC] file:px-3 file:py-2 file:font-semibold"
+          className="text-sm file:mr-3 file:rounded-[10px] file:border-0 file:bg-sand file:px-3 file:py-2 file:font-semibold"
         />
       </label>
       {image && <img src={image.previewUrl} alt="Receipt preview" className="max-h-56 rounded-xl border border-line object-contain" />}
@@ -241,7 +237,7 @@ function ReviewPanel({ collectionId, address, categories }: { collectionId: bigi
           value={categoryIndex ?? ""}
           onChange={(e) => setCategoryIndex(e.target.value === "" ? null : Number(e.target.value))}
           disabled={busy}
-          className="rounded-[10px] border border-line bg-white px-3 py-2"
+          className="input"
         >
           <option value="">{noReceipt ? "Choose a category" : "Let the AI choose"}</option>
           {categories.map((c, i) => (
@@ -264,7 +260,7 @@ function ReviewPanel({ collectionId, address, categories }: { collectionId: bigi
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               disabled={busy}
-              className="rounded-[10px] border border-line bg-white px-3 py-2"
+              className="input"
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
@@ -276,7 +272,7 @@ function ReviewPanel({ collectionId, address, categories }: { collectionId: bigi
               rows={2}
               disabled={busy}
               placeholder="e.g. Bought at the market; the seller had no receipts."
-              className="rounded-[10px] border border-line bg-white px-3 py-2"
+              className="input"
             />
             <span className="text-xs text-muted">10–300 characters. This is public on the ledger.</span>
           </label>
@@ -288,14 +284,14 @@ function ReviewPanel({ collectionId, address, categories }: { collectionId: bigi
           value={payee}
           onChange={(e) => setPayee(e.target.value.trim())}
           disabled={busy}
-          className="rounded-[10px] border border-line bg-white px-3 py-2 font-mono text-xs"
+          className="input font-mono text-xs"
         />
         <span className="text-xs text-muted">Vendors have no wallet, so the vault reimburses whoever paid upfront.</span>
       </label>
       <button
         onClick={onReview}
         disabled={!image || busy || !noReceiptReady || !/^0x[0-9a-fA-F]{40}$/.test(payee)}
-        className="h-12 rounded-[14px] bg-gold text-base font-bold text-dark focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-dark disabled:opacity-50"
+        className="h-12 rounded-2xl bg-gold text-base font-bold text-dark focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-dark disabled:opacity-50"
         aria-live="polite"
       >
         {busy ? LOADING_STEPS[stepIndex] : "Review with AI"}
@@ -331,7 +327,7 @@ function AgentResult({ review: r, previewUrl, at, categories }: { review: Review
   const category = categories[r.categoryIndex]?.name;
   const item = r.extracted?.items?.[0]?.name;
   const total = r.extracted?.total;
-  const border = r.risk === "HIGH" ? "border-risk" : r.risk === "LOW" ? "border-green" : "border-line";
+  const tone = r.risk === "HIGH" ? "bg-[#fff8f4] ring-1 ring-inset ring-[#f3cdb8]" : r.risk === "LOW" ? "bg-[#f6fbf8] ring-1 ring-inset ring-[#c6e3d4]" : "bg-paper shadow-card";
   const contractBlocked = r.outcome === "blocked" && !!r.blockedBy && !NOT_CONTRACT_BLOCKS.includes(r.blockedBy);
   const hidden = r.extracted?.suspiciousText?.[0];
 
@@ -349,7 +345,7 @@ function AgentResult({ review: r, previewUrl, at, categories }: { review: Review
         </div>
       </Card>
 
-      <div className={`flex flex-col gap-3 rounded-2xl border bg-paper p-5 ${border}`}>
+      <div className={`flex flex-col gap-3 rounded-[20px] p-5 ${tone}`}>
         <div className="flex items-center justify-between">
           <h2 className="font-display text-lg font-bold text-dark">Review result</h2>
           <RiskBadge risk={r.risk} />
@@ -374,12 +370,12 @@ function AgentResult({ review: r, previewUrl, at, categories }: { review: Review
         <p className="border-t border-line pt-3 text-sm italic">"{r.reason}"</p>
       </div>
 
-      <div className="flex flex-col gap-1 rounded-2xl bg-dark p-5 text-cream">
+      <div className="flex flex-col gap-1 rounded-[20px] bg-dark p-5 text-cream">
         <p className="text-[11px] font-bold uppercase tracking-[1.5px] text-gold">Smart contract</p>
         {r.outcome === "proposed" ? (
           <>
             <p className="font-display text-lg font-bold">Proposed on-chain · Expense #{r.expenseId}</p>
-            <p className="text-sm text-[#BFD3C9]">
+            <p className="text-sm text-soft">
               No funds move until officers approve it below.{" "}
               {r.txHash && <ExplorerLink path={`tx/${r.txHash}`}>BscScan</ExplorerLink>}
             </p>
@@ -387,12 +383,12 @@ function AgentResult({ review: r, previewUrl, at, categories }: { review: Review
         ) : contractBlocked ? (
           <>
             <p className="font-display text-lg font-bold">Blocked by AmbagVault</p>
-            <p className="text-sm text-[#BFD3C9]">{r.blockedBy} · no funds moved</p>
+            <p className="text-sm text-soft">{r.blockedBy} · no funds moved</p>
           </>
         ) : (
           <>
             <p className="font-display text-lg font-bold">Not sent to the contract</p>
-            <p className="text-sm text-[#BFD3C9]">
+            <p className="text-sm text-soft">
               {r.blockedBy === "UnknownCategory"
                 ? "Choose a category above and review again."
                 : "The total is unreadable. Take a clearer photo and review again."}
@@ -553,7 +549,7 @@ function PendingList({
               <button
                 onClick={() => reject(id)}
                 disabled={busyId !== undefined}
-                className="h-10 rounded-xl border border-risk px-4 text-sm font-semibold text-risk disabled:opacity-50"
+                className="h-10 rounded-xl bg-riskbg px-4 text-sm font-semibold text-risk disabled:opacity-50"
               >
                 Reject
               </button>

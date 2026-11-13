@@ -3,13 +3,16 @@ import Home from "./pages/Home";
 import Ledger from "./pages/Ledger";
 import Pay from "./pages/Pay";
 import Officer from "./pages/Officer";
+import Payments from "./pages/Payments";
+import Records from "./pages/Records";
+import Admin from "./pages/Admin";
 import { isConfigured } from "./config";
 
 export default function App() {
   if (!isConfigured) {
     return (
       <div className="mx-auto max-w-md p-6">
-        <div className="rounded-2xl border border-line bg-paper p-5 text-sm">
+        <div className="rounded-[20px] bg-paper p-5 text-sm shadow-card">
           <p className="font-semibold text-dark">App not configured</p>
           <p className="mt-2">
             Copy <code>.env.example</code> to <code>.env.local</code>, fill in <code>VITE_VAULT_ADDRESS</code>,{" "}
@@ -26,6 +29,9 @@ export default function App() {
       <Route path="/ledger/:id" element={<Ledger />} />
       <Route path="/pay/:id" element={<Pay />} />
       <Route path="/officer" element={<Officer />} />
+      <Route path="/payments" element={<Payments />} />
+      <Route path="/records" element={<Records />} />
+      <Route path="/admin" element={<Admin />} />
       <Route path="*" element={<Home />} />
     </Routes>
   );

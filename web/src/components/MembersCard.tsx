@@ -1,11 +1,9 @@
 import { useMemo, useState } from "react";
 import { usePrivy } from "@privy-io/react-auth";
-import { useQuery } from "@tanstack/react-query";
 import { Card, Chip, ErrorCard, Eyebrow, ProgressBar } from "./ui";
 import { shortAddress } from "../lib/format";
+import { useRoster } from "../lib/useRoster";
 
-type Student = { studentId: string; name: string; section: string; email: string; paid: boolean; loggedIn: boolean };
-type Roster = { uploadedAt: number | null; students: Student[]; notOnRoster: { email: string; address: string }[] };
 
 /** Officers only: upload the class list (CSV) and see who has paid, per section. */
 export default function MembersCard({ collectionId, canUpload }: { collectionId: bigint; canUpload: boolean }) {
@@ -15,17 +13,7 @@ export default function MembersCard({ collectionId, canUpload }: { collectionId:
   const [uploading, setUploading] = useState(false);
   const [uploadMsg, setUploadMsg] = useState<{ ok: boolean; text: string; errors?: string[] }>();
 
-  const roster = useQuery({
-    queryKey: ["roster", collectionId.toString()],
-    queryFn: async () => {
-      const res = await fetch(`/api/roster?collectionId=${collectionId}`, { headers: { authorization: `Bearer ${await getAccessToken()}` } });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
-      return data as Roster;
-    },
-    refetchInterval: 15_000,
-    retry: false,
-  });
+  const roster = useRoster(collectionId);
 
   async function onUpload(file: File | undefined) {
     if (!file) return;
@@ -90,7 +78,7 @@ export default function MembersCard({ collectionId, canUpload }: { collectionId:
               onUpload(e.target.files?.[0]);
               e.target.value = ""; // allow re-uploading the same file
             }}
-            className="text-sm file:mr-3 file:rounded-[10px] file:border-0 file:bg-[#ECE8DC] file:px-3 file:py-2 file:font-semibold"
+            className="text-sm file:mr-3 file:rounded-[10px] file:border-0 file:bg-sand file:px-3 file:py-2 file:font-semibold"
           />
           <span className="text-xs text-muted">This replaces the current list. Each Gmail is matched to the student's Google login.</span>
         </label>
@@ -122,7 +110,7 @@ export default function MembersCard({ collectionId, canUpload }: { collectionId:
             <label htmlFor="section" className="text-muted">
               Section
             </label>
-            <select id="section" value={section} onChange={(e) => setSection(e.target.value)} className="rounded-[10px] border border-line bg-white px-3 py-1.5">
+            <select id="section" value={section} onChange={(e) => setSection(e.target.value)} className="input">
               <option value="">All ({students.length})</option>
               {sections.map((s) => (
                 <option key={s} value={s}>
@@ -138,14 +126,14 @@ export default function MembersCard({ collectionId, canUpload }: { collectionId:
             <ProgressBar value={inSection.length ? (paid.length / inSection.length) * 100 : 0} />
           </div>
 
-          <div role="tablist" aria-label="Payment status" className="flex gap-1 rounded-xl bg-[#ECE8DC] p-1 text-sm font-semibold">
+          <div role="tablist" aria-label="Payment status" className="flex gap-1 rounded-full bg-sand p-1 text-sm font-semibold">
             {(["unpaid", "paid"] as const).map((t) => (
               <button
                 key={t}
                 role="tab"
                 aria-selected={tab === t}
                 onClick={() => setTab(t)}
-                className={`flex-1 rounded-lg py-1.5 focus-visible:outline-2 focus-visible:outline-green ${tab === t ? "bg-paper text-dark shadow-sm" : "text-muted"}`}
+                className={`flex-1 rounded-full py-2 focus-visible:outline-2 focus-visible:outline-green ${tab === t ? "bg-paper text-dark shadow-sm" : "text-muted"}`}
               >
                 {t === "unpaid" ? `Not yet (${unpaid.length})` : `Paid (${paid.length})`}
               </button>
@@ -190,14 +178,14 @@ export default function MembersCard({ collectionId, canUpload }: { collectionId:
               onClick={() => {
                 if (confirm(`Delete the whole list (${students.length} students)? Payments on-chain are not changed.`)) onDelete();
               }}
-              className="self-start rounded-[10px] border border-line px-3 py-1.5 text-xs font-semibold text-risk focus-visible:outline-2 focus-visible:outline-green"
+              className="self-start rounded-xl bg-riskbg px-3 py-1.5 text-xs font-semibold text-risk focus-visible:outline-2 focus-visible:outline-green"
             >
               Delete whole list
             </button>
           )}
 
           {!!roster.data?.notOnRoster.length && (
-            <div className="rounded-xl border border-line p-3 text-xs">
+            <div className="rounded-[14px] bg-field p-3 text-xs">
               <p className="font-semibold text-dark">Paid but not on the list ({roster.data.notOnRoster.length})</p>
               <p className="text-muted">They may have used a different Gmail. Check and match them manually.</p>
               <ul className="mt-1">
