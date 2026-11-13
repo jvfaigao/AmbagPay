@@ -77,6 +77,14 @@ npx hardhat run scripts/deploy.js --network bscTestnet
 npx hardhat run scripts/grant-role.js --network bscTestnet
 # new fee (admin only): env NAME, AMOUNT, CATEGORIES="Shirts:5000,Printing:500", DEADLINE=YYYY-MM-DD (optional)
 npx hardhat run scripts/create-collection.js --network bscTestnet
+# close a fee + open refunds (admin only, cannot be undone; never ID=0, the live demo fee): env ID
+npx hardhat run scripts/close-collection.js --network bscTestnet
+```
+
+Admin (create/close fees) also works in the web app: `/officer` → "Admin · Fees" card. The treasurer wallet
+holds ADMIN_ROLE (granted Nov 13 with `ADMIN_ADDRESS=… grant-role.js`).
+
+```bash
 
 # web (after scaffold)
 cd web && npm install

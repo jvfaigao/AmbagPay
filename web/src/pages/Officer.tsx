@@ -3,6 +3,7 @@ import { usePrivy } from "@privy-io/react-auth";
 import { keccak256, toBytes } from "viem";
 import { useAccount, usePublicClient, useReadContracts, useWriteContract } from "wagmi";
 import Layout from "../components/Layout";
+import AdminPanel from "../components/AdminPanel";
 import MembersCard from "../components/MembersCard";
 import { Card, Chip, ErrorCard, ExpenseSteps, Eyebrow, ExplorerLink, LoadingCard } from "../components/ui";
 import { CHAIN_ID, DEMO_COLLECTION_ID, ORG_NAME } from "../config";
@@ -16,6 +17,7 @@ import { useOnboarding } from "../lib/useOnboarding";
 const REFRESH_MS = 4000;
 const TREASURER_ROLE = keccak256(toBytes("TREASURER_ROLE"));
 const ADVISER_ROLE = keccak256(toBytes("ADVISER_ROLE"));
+const ADMIN_ROLE = keccak256(toBytes("ADMIN_ROLE"));
 
 type Category = { name: string; cap: bigint; spent: bigint };
 
@@ -30,6 +32,7 @@ export default function Officer() {
     contracts: [
       { ...vault, functionName: "hasRole", args: [TREASURER_ROLE, address!] },
       { ...vault, functionName: "hasRole", args: [ADVISER_ROLE, address!] },
+      { ...vault, functionName: "hasRole", args: [ADMIN_ROLE, address!] },
     ],
     query: { enabled: !!address },
   });
@@ -43,6 +46,7 @@ export default function Officer() {
 
   const isTreasurer = roles.data?.[0]?.result === true;
   const isAdviser = roles.data?.[1]?.result === true;
+  const isAdmin = roles.data?.[2]?.result === true;
   const categories = base.data?.[0]?.result as readonly Category[] | undefined;
   const expenseCount = Number(base.data?.[1]?.result ?? 0n);
 
@@ -67,7 +71,7 @@ export default function Officer() {
       </Card>
     );
   } else if (!address || roles.isLoading || !categories) body = <LoadingCard />;
-  else if (!isTreasurer && !isAdviser) {
+  else if (!isTreasurer && !isAdviser && !isAdmin) {
     body = (
       <Card className="flex flex-col gap-1.5 text-sm">
         <p className="font-semibold text-dark">Wala kang officer role.</p>
@@ -80,8 +84,8 @@ export default function Officer() {
     body = (
       <>
         <p className="text-sm lg:text-base">
-          Signed in as <span className="font-semibold text-dark">{isAdviser ? "Adviser" : "Treasurer"}</span>
-          {isAdviser ? ": you give the second approval on big or HIGH-risk expenses." : ": upload receipts and give the first approval."}
+          Signed in as <span className="font-semibold text-dark">{isAdviser ? "Adviser" : isTreasurer ? "Treasurer" : "Admin"}{isAdmin && (isAdviser || isTreasurer) ? " + Admin" : ""}</span>
+          {isAdviser ? ": you give the second approval on big or HIGH-risk expenses." : isTreasurer ? ": upload receipts and give the first approval." : ": create and close fees."}
         </p>
         {onboarding && <p className="text-xs text-muted">Setting up your wallet…</p>}
         {onboardError && <p className="text-xs text-risk">{onboardError}</p>}
@@ -112,6 +116,7 @@ export default function Officer() {
           <div className="flex flex-col gap-3.5">
             <PendingList collectionId={collectionId} count={expenseCount} categories={categories} isTreasurer={isTreasurer} isAdviser={isAdviser} />
             <MembersCard collectionId={collectionId} canUpload={isTreasurer} />
+            {isAdmin && <AdminPanel address={address} />}
           </div>
         </div>
       </>
@@ -119,7 +124,7 @@ export default function Officer() {
   }
 
   return (
-    <Layout title="Officer" subtitle={ORG_NAME} footnote="The agent can only propose. The contract decides." wide={authenticated && (isTreasurer || isAdviser)}>
+    <Layout title="Officer" subtitle={ORG_NAME} footnote="The agent can only propose. The contract decides." wide={authenticated && (isTreasurer || isAdviser || isAdmin)}>
       {body}
     </Layout>
   );

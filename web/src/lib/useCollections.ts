@@ -21,5 +21,6 @@ export function useCollections(member?: `0x${string}`) {
     const paid = member ? (rows.data?.[i * 2 + 1]?.result as boolean | undefined) : undefined;
     return [{ id, name: c.name, amountPerMember: c.amountPerMember, status: c.status, paid }];
   });
-  return { collections, isLoading: count.isLoading || rows.isLoading, refetch: rows.refetch };
+  // count first: a new fee changes the list of ids, and the rows query follows it
+  return { collections, isLoading: count.isLoading || rows.isLoading, refetch: () => count.refetch().then(() => rows.refetch()) };
 }
