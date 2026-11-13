@@ -4,7 +4,7 @@ import { usePrivy } from "@privy-io/react-auth";
 import { useBalance } from "wagmi";
 import { CHAIN_ID } from "../config";
 
-const MIN_GAS = parseEther("0.0005"); // keep in sync with api/onboard.ts
+export const MIN_GAS = parseEther("0.0005"); // keep in sync with api/onboard.ts
 
 /**
  * Once per page load: asks /api/onboard to top up gas (+ test pesos) and to remember this Google email → wallet
