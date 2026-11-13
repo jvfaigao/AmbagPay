@@ -1,7 +1,16 @@
 import { useReadContract, useReadContracts } from "wagmi";
 import { vault } from "./contracts";
 
-export type CollectionSummary = { id: bigint; name: string; amountPerMember: bigint; status: number; paid?: boolean };
+export type CollectionSummary = {
+  id: bigint;
+  name: string;
+  amountPerMember: bigint;
+  status: number;
+  deadline: bigint;
+  totalCollected: bigint;
+  totalSpent: bigint;
+  paid?: boolean;
+};
 
 /** Every collection (fee) on the vault, plus whether `member` paid each one when given. */
 export function useCollections(member?: `0x${string}`) {
@@ -16,10 +25,11 @@ export function useCollections(member?: `0x${string}`) {
   });
 
   const collections: CollectionSummary[] = ids.flatMap((id, i) => {
-    const c = rows.data?.[i * 2]?.result as { name: string; amountPerMember: bigint; status: number } | undefined;
+    const c = rows.data?.[i * 2]?.result as Omit<CollectionSummary, "id" | "paid"> | undefined;
     if (!c) return [];
     const paid = member ? (rows.data?.[i * 2 + 1]?.result as boolean | undefined) : undefined;
-    return [{ id, name: c.name, amountPerMember: c.amountPerMember, status: c.status, paid }];
+    const { name, amountPerMember, status, deadline, totalCollected, totalSpent } = c;
+    return [{ id, name, amountPerMember, status, deadline, totalCollected, totalSpent, paid }];
   });
   // count first: a new fee changes the list of ids, and the rows query follows it
   return { collections, isLoading: count.isLoading || rows.isLoading, refetch: () => count.refetch().then(() => rows.refetch()) };

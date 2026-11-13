@@ -3,6 +3,7 @@ import Home from "./pages/Home";
 import Ledger from "./pages/Ledger";
 import Pay from "./pages/Pay";
 import Officer from "./pages/Officer";
+import Payments from "./pages/Payments";
 import { isConfigured } from "./config";
 
 export default function App() {
@@ -26,6 +27,7 @@ export default function App() {
       <Route path="/ledger/:id" element={<Ledger />} />
       <Route path="/pay/:id" element={<Pay />} />
       <Route path="/officer" element={<Officer />} />
+      <Route path="/payments" element={<Payments />} />
       <Route path="*" element={<Home />} />
     </Routes>
   );

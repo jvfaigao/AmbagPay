@@ -202,6 +202,9 @@ export default function Pay() {
           <Link to={`/ledger/${collectionId}`} className="text-sm font-semibold text-green underline-offset-2 hover:underline">
             See it on the public ledger
           </Link>
+          <Link to="/payments" className="text-sm font-semibold text-green underline-offset-2 hover:underline">
+            See all my payments
+          </Link>
         </Card>
       ) : authenticated ? (
         <div className="flex flex-col gap-1 px-1">
